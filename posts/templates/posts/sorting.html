@@ -1,0 +1,210 @@
+<head>
+  <style type="text/css">
+    code { background-color: gray; color: blue; }
+  </style>
+</head>
+<body>
+  <p>Recently, I've been going through <a href="https://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-046j-introduction-to-algorithms-sma-5503-fall-2005/video-lectures/">MIT's Introduction to Algorithms</a> and its <a href="https://mitpress.mit.edu/books/introduction-algorithms-third-edition">companion book</a> by the same name to revisit CS basics. This article will serve as a summary my notes from the first 4 lectures which are a deep dive into different types of sorting algorithms and how they compare. I'll be using the Python language to code them here.</p>
+  <p>For this article, all algorithms will attempt to solve the same problem of sorting a list of numbers from the smallest to the largest. For example, [2,3,4,1,5] becomes [1,2,3,4,5]. For each algorithm, I'll explain how it works, show an implementation in Python, and talk about its worst case and average case run times.</p>
+  <h2>Insertion Sort</h2>
+  <p>Insertion sort is an algorithm that iterates over a list taking storing an element in a new variable, key, and checking each element below it in reverse order to find its place. With the first two variables in order, it continues to place the rest of the variables knowing the previous elements in the array are already sorted. It uses the variables 'j' and 'i' to track the current place position of the element needing to be placed and the place of the previous element its comparing to, respectively.</p>
+  <code>
+    <pre>
+      def insertionSort(arr):
+          for j in range(1, len(arr)):
+              key = arr[j]
+              i = j - 1
+              while i >= 0 and arr[i] > key:
+                  arr[i + 1] = arr[i]
+                  i = i - 1
+                  arr[i + 1] = key
+          return arr
+    </pre>
+  </code>
+  <p>Worst Case: The worst case of insertion sort occurs when the input array is reverse sorted since this will require it to run through each possible 'i' value with each possible 'j' leading to a lot of work. With a larger 'i' loop for each 'j', the algorithm is quadratic and has a time complexity of O(n^2).</p>
+  <p>Average Case: Even in the average case, it doesn't have the maximum amount of work to do, but will likely have to run through multiple 'i' values for each 'j'.</p>
+  <p>This algorithm gets significantly larger with each additional input and is usually the least effective of the algorithms covered as it uses a more linear.</p>
+  <h2>Bubble Sort</h2>
+  <p>Bubble Sort is another inefficient algorithm which loops through the input array and for each element that's less than the previous element, it swaps them. Since it can only swap elements next to each other this way, it requires multiple loops to fully sort it.</p>
+  <code>
+    <pre>
+      def bubbleSort(arr):
+          flag = True
+          while flag:
+              swap = False
+              for i in range(1, len(arr)):
+                  if arr[i-1] > arr[i]:
+                      arr[i-1], arr[i] = arr[i], arr[i-1]
+                      swap = True
+              if swap is False:
+                  flag = False
+          return arr
+    </pre>
+  </code>
+  <p>Best Case (pointless): In the scenario where the array is already sorted, the algorithm will stop after the first loop, having an O(n) linear time complexity.</p>
+  <p>Worst/Average: This algorithm is extremely inefficient since unless it gets extremely lucky and can sort with a single pass, it will be running multiple loops through the array and has a Θ(n^2) quadratic time complexity.</p>
+  <h2>Merge Sort</h2>
+  <p>The Merge Sort algorithm works by recursively splitting an array in half until the array consists of individual elements. It uses a merging subroutine which takes two sorted arrays and merges them to be in order by repeatedly taking the smaller end of the two sorted arrays. Since it splits all the way down to individual elements, it can then merge arrays with length of one since into sorted arrays of length two, and keep going until it creates a merged array.</p>
+  <p>An implementation of the merge subroutine in Python is below. It takes two arrays and moves the smaller of the two ends to a results array which it returns. It then finishes by adding the remaining input arrays to the result once one is out of items, since the remaining array won't be empty.</p>
+  <code>
+    <pre>
+      def merge(left, right):
+          result = []
+          while len(left) > 0 and len(right) > 0:
+              if left[0] <= right[0]:
+                  result.append(left.pop(0))
+              else:
+                  result.append(right.pop(0))
+              result += left
+              result += right
+              return result
+    </pre>
+  </code>
+  <p>The recursive merge sort function that uses this merge function works as follows. It returns an array with size one or less, other-wise it splits the array in half and calls itself on each half. Finally, it merges the results of each merge sort.</p>
+  <code>
+    <pre>
+      def merge_sort(arr):
+          if len(arr) <= 1:
+              return arr
+          left = []
+          right = []
+          midpoint = math.floor(len(arr)/2)
+          left = arr[0: midpoint]
+          right = arr[midpoint: len(arr)]
+          left = merge_sort(left)
+          right = merge_sort(right)
+          return merge(left, right)
+    </pre>
+  </code>
+  <p>Take an array such as [2,3,5,4,1,6]. The algorithm will split it in half until an implementation of merge sort gets arrays of one element, at which point it will return the single elements and continue on with the merge sort.</p>
+  <p>Disassembly and reassembly:</p>
+  <p>[2, 5, 3, 4, 1, 6]</p>
+  <p>[2, 5, 3] [4, 1, 6]</p>
+  <p>[2] [5, 3] [4] [1, 6]</p>
+  <p>[2] [5] [3] [4] [1] [6]</p>
+  <p>[2] [3, 5] [4] [1, 6]</p>
+  <p>[2, 3, 5] [1, 4, 6]</p>
+  <p>[1, 2, 3, 4, 5, 6]</p>
+  <p>Best Case: In the off chance that the algorithm receives an array of length one, then it will simply return it leading to O(1).</p>
+  <p>Worst/Average Case: This algorithm works a lot faster than insertion sort as it doesn't need to loop through each array element multiple times and ends up Θ(n lg n).</p>
+  <h2>Quick Sort</h2>
+  <p>Quick Sort is another divide and conquer algorithm that sorts an array in place and thus is memory efficient. It works recursively like merge sort and chooses a pivot point and moves all elements less than it to the left and all greater to the right. It then sorts each side of the pivot point in the same way until the array is sorted.</p>
+  <p>Like merge sort's merge subroutine, quick sort uses a partition subroutine which takes in an array and a start and end point and searches, looping through the array from the start to end points and moving anything less than the starting point to the left of it.</p>
+  <code>
+    <pre>
+      def partition(arr, start, end):
+          pivot = arr[start]
+          i = start
+          j = start + 1
+          while j < end:
+              if arr[j] <= pivot:
+                  i = i + 1
+                  arr[i], arr[j] = arr[j], arr[i]
+              j += 1
+          arr[start], arr[i] = arr[i], arr[start]
+          return i
+    </pre>
+  </code>
+  <p>It returns the current position of the pivot which it then uses to sort each side of the array in the same way, recursively. Initially, it should be called using 0 for start and the length of the array for the end.</p>
+  <code>
+    <pre>
+      def quicksort(arr, start, end):
+          if start <span id="mce_SELREST_start" style="overflow: hidden; line-height: 0;"></span>< end:
+              r = partition(arr, start, end)
+              quicksort(arr, start, r-1)
+              quicksort(arr, r+1, end)
+          return arr
+    </pre>
+  </code>
+  <p>Here's a partial example of sorting the array</p>
+  <code>
+    <pre>
+      First partition, start = 0, end=5
+      pivot = 3
+      [3, 2, 4, 1, 5]
+      i = 0, j = 1: 2 is less than 3, i increases and switches with j (no change)
+      i = 1, j = 2: 4 is greater than 3
+      i = 1, j = 3: 1 is less than 3, i increases to 2 and switches 4 with 1
+      [3, 2, 1, 4, 5]
+      i = 2, j = 4: 5 is greater than 3
+      return 2
+      Quick sort is called again with start = 0, end = 1
+      Quick sort is called again with start = 3, end = 5
+      etc.
+    </pre>
+  </code>
+  <p>Worst Case: The worst case for this algorithm is when all items are sorted or reverse sorted and has a quadratic time complexity. Unfortunately, this worst case may be the most common as arrays are often built in sorted order.</p>
+  <p>Lucky Case: Generally, assuming a random order, it will be Θ(n lg n).</p>
+  <p>Since sorted or reverse sorted is the worst case and sorted arrays will often be passed into sort functions to double check, randomizing the order of inputs can help reduce the chance of the worst case and make Θ(n lg n) the more likely answer.</p>
+  <h2>Heap Sort</h2>
+  <p>As a warning for this one, my implementation is not quite a heap data structure and definitely a rougher take.</p>
+  <p>Heap Sort is an algorithm that uses a data structure called a heap which is roughly a binary tree represented as an array, top to bottom, left to right.</p>
+  <p>Ex.</p
+  <code>
+    <pre>
+          1
+        2   3
+       4 5 6 7
+    </pre>
+  </code>
+  <p>Each number in the tree above also represents its place in the array. If an array starts at place 1, going left or right works nicely, since you can multiply the current node's place by 2 to go left and add 1 to that to go right.</p>
+  <p>Since programming arrays start at 0, going left or right looks like this, adding one at the start to convert it to the pattern and removing it at the end to go back the computer reference.</p>
+  <code>
+    <pre>
+      def left(i):
+          return 2 * (i + 1) - 1
+      def right(i):
+          return 2 * (i + 1)
+    </pre>
+  </code>
+  Heap Sort has a number of sub routines, the first which builds a "max heap", which a heap ordered so that each node is larger than its children. In this example, I'll be treating the heap as an object with a "vals" property and a "size" property. The heap size property is important for stopping the largest values from being considered part of the heap calculations while keeping their place in the output array.
+  <code>
+    <pre>
+      def build_max_heap(arr):
+          arr = {
+              'vals': arr,
+              'size': len(arr)
+          }
+          i = math.floor(len(arr['vals'])/2)
+          while i >= 0:
+              arr = max_heapify(arr, i)
+              i = i - 1
+          return arr
+    </pre>
+  </code>
+  <p>Build_max_heap takes in an array and constructs this object, then it sets an i value to start halfway through the object's values property and call another sub routine to alter the object until i is 0. Max_heapify is the subroutine that takes care of making sure a node is larger than it's children, correcting a single node and its children each call. The loop starts half way through the array since the other half are leaf nodes with no children.</p>
+  <code>
+    <pre>
+      def max_heapify(arr, i):
+          l = left(i)
+          r = right(i)
+          if l < arr['size'] and arr['vals'][l] > arr['vals'][i]:
+              largest = l
+          else:
+              largest = i
+          if r < arr['size'] and arr['vals'][r] > arr['vals'][largest]:
+              largest = r
+          if largest != i:
+              arr['vals'][i], arr['vals'][largest] = arr['vals'][largest], arr['vals'][i]
+              arr = max_heapify(arr, largest)
+          return arr
+    </pre>
+  </code>
+  <p>Lastly, the core function itself starts by building the max_heap. It then repeats a loop swapping the first element of the max-heap (the largest item) with the end of the array, then decrementing the heap size it ignores that last element on the next run. Lastly, it calls max_heapify again</p>
+  <code>
+    <pre>
+      def heapsort(arr):
+          arr = build_max_heap(arr)
+          i = arr['size'] - 1
+          while i > 0:
+              arr['vals'][i], arr['vals'][0] = arr['vals'][0], arr['vals'][i]
+              arr['size'] = arr['size'] - 1
+              arr = max_heapify(arr, 0)
+              i = i - 1
+              return arr['vals']
+    </pre>
+  </code>
+  <p>It continues to heapify, swap and decrement the heap size until the array is sorted, at which point it returns the array.</p>
+  <p>As mentioned before, many of the functions here would be methods of the heap which should also be able to be referenced by place.</p>
+  <p>Worst/Average case: Along with most of the other sorting algorithms I've seen so far, Heap Sort manages gives Θ(n lg n) performance.</p>
+  </body>

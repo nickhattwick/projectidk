@@ -1,0 +1,115 @@
+<head>
+  <style type="text/css">
+   code { background-color: gray; color: blue;}
+  </style>
+</head>
+<body>
+  <p>Getting my programming start in Python and JavaScript, I remember wondering what the point of a stack and a queue were. With the power of their current array implementations, it was hard to imagine a list-like structure that could only have elements added or removed from one side. Nevertheless, I've found myself solving some coding problems based on these structures and it's time that I revisted them.</p>
+  <p>Stacks and Queues are two data structures that store a list of values and provide different methods for interacting with them. Both have two basic methods, adding and removing data from their respective lists. These base functions work differently between the two structures, with a stack needing to access its newer items first, while the queue can only access its items in the order they were put in. The names for these structures are fairly descriptive with a stack's last in, first out (LIFO) data access being similar to how one might add and remove items from a stack of plates. A queue's first in, first out (FIFO) ordering acts a line of customers would, with the first person in line being the first served.</p>
+  <p>There are multiple ways of implementing these data structures, creating a data store along with the methods needed to access it. Creating classes can help structure this logic. While a list or array is good way to store ordered data, a linked list will also work quite well for helping restrict list access to the desired interactions.</p>
+  <h2>Stacks</h2>
+  <p>First, let's take a look a class implementation of a stack in Python. Starting off, we'd need a data store. In the case of a linked list, we can just include a Node class and a property that will reference the top node of the stack.</p>
+  <code>
+    <pre>
+      class Node:
+          def __init__(self, data):
+              self.data = data
+              self.next = None
+
+      class Stack:
+          top = None;
+    </pre>
+  </code>
+  <p>With no items starting in the list, the top will initially be None, but will have Node's added to it with it's own push property.</p>
+  <code>
+    <pre>
+      class Stack:
+          top = None;
+
+          def push(self, item):
+              item = Node(item)
+              item.next = self.top
+              self.top = item
+    </pre>
+  </code>
+  <p>The code for push creates a new node with the data passed into, setting it to the top of the stack with its next value being the previous top. With the last item in also being the first item out, which is handled with the pop function which removes and returns the top element by returning the top value and setting the top to be the next node if it exists.</p>
+  <code>
+    <pre>
+          def pop(self):
+              if self.top:
+                  output = self.top.data
+                  self.top = self.top.next
+                  return output
+    </pre>
+  </code>
+  <p>While these are the primary functions of a stack, it may also be work adding a function to allow you look at the top of the stack without removing it or creating problem specific methods to help return the min or max, though these operations could also be handled outside of stack methods. A peek method would be follow the same logic as pop, but be one line that returns self.top.data, while a min or max function could work by recursively going through node's next values and comparing them to a current max. If you have specific use cases, you could store a reference on each node to the minimum values of it and its children, when building the tree</p>
+  <h2>Queues</h2>
+  <p>As with stacks, queues have 3 primary properties which are a value store, and add and remove methods often refered to enqueue and dequeue. Unlike stacks however, the queue needs to be able to add items to the end and remove items from the front. For this, when using a linked list, it's common to have two node properties. Instead of just the top, he're we'll reference the first and last item in the data structure.</p>
+  <code>
+    <pre>
+      class Queue:
+          first = None
+          last = None
+
+          def enqueue(self, item):
+              item = Node(item)
+              if self.last:
+                  last.next = item
+              self.last = item
+              if self.first == None:
+                  self.first = item
+
+          def dequeue(self):
+              if self.first:
+                  output = self.first.data
+                  self.first = self.first.next
+                  return output
+                  if self.first == None:
+                      self.last = None
+              else:
+                  return None
+    </pre>
+  </code>
+  <p>Having a first and last property also means that if one property becomes or None or has it's first item changed, the other must change to match. Other than that, enqueue adds an item to the end and dequeue removes the first item in the list. Again, other methods can be added as needed, but these properties make up the core of the queue data structure.</p>
+  <h2>Two Stacks Can Make a Queue</h2>
+  <p>A interesting coding challenge I've seen a few times now is to use two stacks to implement a queue using two stacks. The logic behind this is fairly straight forward. If you've implimented a stack and filled it with data points, you can only access the most recent data point added. However, if you were to repeatedly take the most recent element and put it into a new empty stack, then the last element of that stack would be the first element that was added to the first stack.</p>
+  <p>In the following code, the queue uses two stacks as its data stores and it's enqueue and dequeue methods call the methods of those stacks.</p>
+  <code>
+    <pre>
+      class StackQueue:
+          front = Stack()
+          back = Stack()
+
+          def enqueue(self, data):
+              self.back.push(data)
+    </pre>
+  </code>
+  <p>One stack represents the front of the queue, with the other representing the back. Adding an item can be done by adding to the back queue, with the logic for moving items between queues handled in the dequeue function. Additionally, for this I added an "isEmpty()" function to the Stack implementations which returns True if the stack is empty.</p>
+  <code>
+    <pre>
+      class Stack:
+        ...
+        def isEmpty(self):
+          if self.top == None:
+              return True
+          else:
+              return False
+    </pre>
+  </code>
+  <p>As for the dequeue function, if the front stack already has data in it, it can simply return the first item. If not, then it first needs to move any items in the back queue to the front queue, reversing the order in the process placing the first item put in the back queue as the last item in the front queue allowing it to be returned.</p>
+  <code>
+    <pre>
+      class StackQueue:
+          ...
+          def dequeue(self):
+            if self.front.isEmpty():
+                if self.back.isEmpty() == False:
+                    while self.back.isEmpty() == False:
+                        self.front.push(self.back.pop())
+                else:
+                    return None
+            return self.front.pop()
+    </pre>
+  </code>
+  <h2>Conclusion</h2>
+  <p>And there are some basic implementation of the stack and queue data structures. These direction focused collections are used in a lot of challenges and in other algorithms and while current implimentations of resizable arrays provide the same functionality, they are still good to slearn about and provide more focused uses.</p>

@@ -1,0 +1,348 @@
+<head>
+  <style type="text/css">
+    code { background-color: gray; color: blue; }
+  </style>
+</head>
+<body>
+  <p>For the next few steps in my approach to Machine Learning, I plan to tackle a few more of Kaggle's Getting Started Competitions of various types and finally try my hand on an actual one. Last time, I took I tried my hand at the <a href="https://projectidkblog.wordpress.com/2019/02/26/tackling-the-titanic-problem/">Titanic</a> competition which was a classification problem, so this time I'll be looking at the <a href="https://www.kaggle.com/c/house-prices-advanced-regression-techniques">Ames Housing Dataset</a> and attempt to predict the price of each house based on its features. Where the previous example attempted so classify items into groups, the results of this will be continuous instead of categorical, calling for regression.</p>
+  <h2>The Data</h2>
+  <p>Like the previous problem, the data is split into two csv files, one to train the model with and one to test on, with the the training set containing the house's price and the test not. Unlike the last problem which only had 12 features to train with, this one has 79 features to take into consideration, making it a lot harder to tell which categories could be important. These values fall into categories such as</p>
+  <ul>
+  	<li>size of the property and individual room sizes</li>
+  	<li>classification of buildings</li>
+  	<li>shape of the property</li>
+  	<li>what kind of utilities it has</li>
+  	<li>how old it is and when it last remodeled</li>
+  	<li>what material its made of</li>
+  	<li>whats in the surrounding neighborhood (access to train, roads)</li>
+  	<li>what condition and quality is in</li>
+  	<li>how was it sold</li>
+  </ul>
+  <p>Considering there's data on the size and quality of individual rooms, I'm initially wondering if its more important to think of the quality and size values as there own group, or if they'll be more important grouped with the room. Will there be one value most important to judging a room than others and which rooms will be most important? There isn't an obvious answer to those questions without seeing what the data has to say about it. Looking through the data, nothing looks like it could be easily discarded the same way many of the Titanic passengers had ticket numbers or names that wouldn't be useful to predict new values.</p>
+
+  <p>The features don't all seem to be of equal importance and some info is repeated between features. HouseStyle and MSSubClass both talk about how many stories the house has and the house is given a quality and condition along with individual rooms to give greater detail. In this case, the overall condition and quality seem like they are may be a summation of other individual pieces.</p>
+
+  <h2>Data Cleaning and Feature Selection</h2>
+  <p>With the additional features, this task seems like it will be trickier than the last. Admittedly, I'm not sure if it's best for me to use an unsupervised learning algorithm to try and narrow down the number of features or if 79 is easy enough for the program and just too many for me as a human to think about. The data fit into 4 different categories based on to process them.</p>
+  <ol>
+  	<li>Continuous data that can be left as is</li>
+  	<li>Nominal categorical data that needs to be encoded</li>
+  	<li>Ordinal categorical data that needs to be converted to continuous</li>
+  </ol>
+  <p>These add some complexity to the the previous example which only had the first two. For the third, some data exists with categories ranging from poor (or nonexistent) to excellent, with each value being somewhere in between. These can be represented as numbers on a scale, as simply using one-hot encoding would lose the connection between the values. While Poor to Excellent is more obvious and covers numerous values for qualities and conditions, a couple fall outside of this trend. PavedDrive is a field that has three possible values: gravel, partially paved and paved, with the middle being in between the other two values. Fence Quality seems to share a poor to excellent style of range, with the values being N/A (no fence), Minimum Wood/Wire, Good Wood, Minimum Privacy and Good Privacy. For these values, I'll substitute a number for each entry based on its rank. Poor would be zero, while Excellent would be six with the other values on the scale placed in between. In order to handle the conversion, I'm using a library called Category Encoders which contains an Ordinal Encoder model to handle categorical data that needs to maintain its order.</p>
+
+  <p>First, you specify the mappings that need to be done as as a mapping parameter and then pass them into the Ordinal Encoder.</p>
+  <code>
+    <pre>
+      import category_encoders as ce
+      ptoxl = ['ExterQual', 'ExterCond', 'HeatingQC', 'KitchenQual', 'FireplaceQu', 'GarageQual', 'GarageCond', 'PoolQC', 'BsmtQual', 'BsmtCond']
+      converttonum = ['BsmtExposure', 'BsmtFinType1', 'BsmtFinType2', 'Functional', 'GarageFinish', 'Fence', 'PavedDrive']
+      colmap = [
+        {
+          "col": "BsmtExposure",
+          "mapping": [
+            ('NA', 0),
+            ('No', 1),
+            ('Mn', 2),
+            ('Av', 3),
+            ('Gd', 4)
+          ]
+        },
+        {
+          "col": "Functional",
+          "mapping": [
+            ('Sal', 0),
+            ('Sev', 1),
+            ('Maj2', 2),
+            ('Maj1', 3),
+            ('Mod', 4),
+            ('Min2', 5),
+            ('Min1', 6)
+          ]
+        },
+        {
+          "col": "GarageFinish",
+          "mapping": [
+            ('NA', 0),
+            ('Unf', 1),
+            ('RFn', 2),
+            ('Fin', 3)
+          ]
+        },
+        {
+          "col": "PavedDrive",
+          "mapping": [
+            ('N', 0),
+            ('P', 1),
+            ('Y', 2)
+          ]
+        },
+        {
+          "col": "Fence",
+          "mapping": [
+            ('NA', 0),
+            ('MnWw', 1),
+            ('GdWo', 2),
+            ('MnPrv', 3),
+            ('GdPrv', 4)
+          ]
+        }
+      ]
+      for feature in ptoxl:
+          colmap.append({
+            "col": feature,
+            "mapping": [
+              ('NA', 0),
+              ('Po', 1),
+              ('Fa', 2),
+              ('TA', 3),
+              ('Gd', 4),
+              ('Ex', 5)
+            ]
+          })
+      for feature in ['BsmtFinType1', 'BsmtFinType2']:
+          colmap.append({
+            "col": feature,
+            "mapping": [
+              ('NA', 0),
+              ('Unf', 1),
+              ('LwQ', 2),
+              ('Rec', 3),
+              ('BLQ', 4),
+              ('ALQ', 5),
+              ('GLQ', 6)
+            ]
+          })
+
+      encoder = ce.OrdinalEncoder(mapping=colmap, return_df=True)
+      df = encoder.fit_transform(df_raw)
+    </pre>
+  </code>
+
+  <p>From here, I used Pandas' get dummies function to convert all of the nominal category values into their own columns.</p>
+  <code>
+    <pre>
+      categorical = ['MSSubClass', 'MSZoning', 'Street', 'Alley', 'LotShape', 'LandContour', 'Utilities', 'LotConfig', 'LandSlope', 'Neighborhood', 'Condition1', 'Condition2', 'BldgType', 'HouseStyle', 'RoofStyle', 'RoofMatl', 'Exterior1st', 'Exterior2nd', 'MasVnrType', 'Foundation', 'Heating', 'CentralAir', 'Electrical', 'GarageType', 'MiscFeature', 'SaleType', 'MoSold', 'YrSold', 'SaleCondition']
+      df = pd.get_dummies(df, columns=categorical)
+    </pre>
+  </code>
+  <p>Lastly for preprocessing, I removed the "Id" column and used Scikit-Learn's SimpleImputer to replace the null values with mean values for the set.</p>
+  <code>
+    <pre>
+      imputed_df = pd.DataFrame(my_imputer.fit_transform(df), columns=df.columns)
+    </pre>
+  </code>
+  <p>Lastly, I split the data into a training and test set.</p>
+  <code>
+    <pre>
+      cols = [col for col in new_df.columns if col != 'SalePrice']
+      X_train, X_test, y_train, y_test = train_test_split(new_df[cols], new_df['SalePrice'], random_state=0)
+    </pre>
+  </code>
+
+  <h2>Testing the Algorithms</h2>
+  <p>As before, I created an instance of Scikit-Learn's implementation of each model I used, and passed it into a pipeline that applies a standard scaler and grid search with cross validation.</p>
+
+  <h2>Linear Models</h2>
+  <p>For the first algorithms, I tested out three kinds of linear regression models: Ridge, Lasso and ElasticNet, a combination of elements from the previous two. I had read that the ElasticNet would usually be the most practical of the three, but wanted to test all three to see how they perform.</p>
+
+  <h2>Ridge</h2>
+  <p>First, up is the ridge regression attempt which uses an L2 method for regularization. The grid's parameter, alpha, controls how closely it tries to fit to the training data vs generalizing, with a higher alpha being more generalized.</p>
+
+  <code>
+    <pre>
+      param_grid = {'ridge__alpha': [0.001, 0.01, 0.1, 1, 10, 100, 250, 500, 750, 1000]}
+      pipe = Pipeline([("scaler",StandardScaler()), ("ridge", Ridge())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+
+  <p>Best alpha: 250</p>
+  <p>Training set score: 0.92</p>
+  <p>Test set score: 0.69</p>
+
+  <p>Removing the 250 option</p>
+
+  <p>Best alpha: 500</p>
+  <p>Training set score: 0.91</p>
+  <p>Test set score: 0.72</p>
+
+  <p>Initially, I tried the search without 250 and 750, and was wondering if it would find something that matched better than 500. I'm a bit confused as to why it appears to trade 3 percent on the test set for an extra 1 percent of training set, since the latter results look like they'd be better when it comes to receiving new data.</p>
+
+  <h2>Lasso</h2>
+  <p>Next, I tried a lasso regression model, which is a similar idea to the ridge, except using an L1 method which can generalize to the point where a parameter's impact on the model can be ignored.</p>
+
+  <code>
+    <pre>
+      param_grid = {'lasso__alpha': [0.001, 0.01, 0.1, 1, 10, 100, 250, 500, 750, 1000], 'lasso__max_iter': [1000, 10000, 100000]}
+      pipe = Pipeline([("scaler",StandardScaler()), ("lasso", Lasso())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+
+  <p>Best alpha: 750</p>
+  <p>Training set score: 92</p>
+  <p>Test set score: 67</p>
+
+  <h2>Elastic Net</h2>
+  <p>The last linear model I tried out is the Elastic Net model which uses a combination of the regularization methods from the previous two, controlled by the l1_ratio parameter, where zero being L2 and 1 being L1. When I tried a grid search with alpha and l1_ratio. While I leaned the ratio options toward L1 regularization as per Scikit-Learn's Elastic Net documentation, the search ended up picking 1 and matching Lasso's results.</p>
+
+  <code>
+    <pre>
+      param_grid = {'net__alpha': [0.001, 0.01, 0.1, 1, 10, 100, 250, 500, 750, 1000], 'net__l1_ratio': [.1, .5, .7, .9, .95, .99, 1]}
+      pipe = Pipeline([("scaler",StandardScaler()), ("net", ElasticNet())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+  <p>Best alpha: 750</p>
+  <p>l1_ratio: 1</p>
+  <p>Training set score: 0.92</p>
+  <p>Test set score: 0.67</p>
+
+  <p>Given the similarities to Lasso's results, this is a model I should probably deep dive later, as I'm confused as to the choices it's making, especially when ridge seemed to perform a lot better. Likely, I'm not testing out the right parameters, though I'm not sure what those would be.</p>
+
+  <h2>Random Forest Regressor</h2>
+  <p>Next up, I tried out a Random Forest regression model with 300, which so far seems to be one of the better choices.</p>
+
+  <code>
+    <pre>
+      param_grid = {'rf__n_estimators': [300]}
+      pipe = Pipeline([("scaler", StandardScaler()), ("rf", RandomForestRegressor())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+  <p>Training set score: 0.98</p>
+  <p>Test set score: 0.86</p>
+
+  <p>I also tried this without the grid search as such, but end up with a worse score as a result of the following code, with the grid search scores coming from calling GridSearchCV's score function.</p>
+
+  <code>
+    <pre>
+      pipe = Pipeline([("scaler", StandardScaler()), ("rf", RandomForestRegressor(n_estimators=300))])
+      train_score = np.mean(cross_val_score(pipe, X_train, y_train, cv=5))
+      pipe.fit(X_train, y_train)
+      y_pred = pipe.predict(X_test)
+      test_score = np.mean(cross_val_score(pipe, X_test, y_test, cv=5))
+    </pre>
+  </code>
+
+  <p>Training set score: 0.86</p>
+  <p>Test set score: 0.77</p>
+
+  <p>Grid search seems unnecessary here since I'm only using one parameter which should remove the need for the grid, but the score appears to be quite a bit worse without it. I wouldn't think there would be a difference between these two methods, so it might just be how the scores are calculated from the 5 cross validation scores.</p>
+
+  <h2>Gradient Boosted Decision Trees</h2>
+  <p>The next tree based model I used was Scikit's GradientBoostingRegressor model. The GradientBoostingClassifier was the most effective of my attempts on the Titanic problem and appears to be the best so far here, with its scoring on the training and test sets.</p>
+
+  <code>
+    <pre>
+      param_grid = {'gb__n_estimators': [50], 'gb__learning_rate': [0.001, 0.01, 0.1, .2, .3, .5, .7, 1], 'gb__max_depth': [2, 3, 4, 5, 6, 7, 8]}
+      pipe = Pipeline([("scaler", StandardScaler()), ("gb", GradientBoostingRegressor())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+
+  <p>Best learning_rate: 0.1</p>
+  <p>Best max_depth: 5 (is this another case of larger is more accurate)</p>
+  <p>Training set score: 0.99</p>
+  <p>Test set score: 0.88</p>
+
+  <p>I had to lower the number of n_estimators presumably to account for the other grid-search parameters. Leaving it at 300 caused Scikit-Learn to give me the error, "ValueError: Input contains NaN, infinity or a value too large for dtype('float64')." I spent a good amount of time making sure I'd checked that none of the value types in the error were left in my data when it was fitted, although if one of them were the error, the previous models probably wouldn't have run either. I'm guessing this error also occurs if the process is taking too long, as it was fixed by reducing n_estimators to 50.</p>
+
+  <h2>XGBoost</h2>
+  <p>Lastly, I decided to give XGBoost another shot and try out its gradient boosting regressor model.</p>
+
+  <code>
+    <pre>
+      param_grid = {'xg__n_estimators': [10], 'xg__learning_rate': [0.001, 0.01, 0.1, .3, .5, .7, 1], 'xg__max_depth': [2, 3, 4, 5, 6, 7, 8], 'xg__reg_alpha': [0.001, 0.01, 0.1, 1, 10, 100, 250, 500, 750, 1000], 'xg__reg_lambda': [0, 0.001, 0.01, 0.1, 1, 10, 100]}
+      pipe = Pipeline([("scaler", StandardScaler()), ("xg", xgb.XGBRegressor())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+  <p>Best Learning rate: 0.3</p>
+  <p>Best Max depth: 5</p>
+  <p>Best Alpha: 250</p>
+  <p>Best Lambda: 1</p>
+  <p>Training set score: 0.96</p>
+  <p>Test set score: 0.79</p>
+
+  <p>I had to take down the number of estimators a bit to run this with the grid search and multiple parameters, but I can up the number by taking out the other parameters, which ended up with the same results as Scikit-learn's gradient boosting regressor.</p>
+
+  <code>
+    <pre>
+      param_grid = {'xg__n_estimators': [300]}
+      pipe = Pipeline([("scaler", StandardScaler()), ("xg", xgb.XGBRegressor())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+
+  <p>Training set score: 0.99</p>
+  <p>Test set score: 0.88</p>
+
+  <h2>Submitting the Results</h2>
+  <p>This time, I chose to submit the results of the Ridge, RandomForest, and Gradient Boosting Tree models to Kaggle. This is done by selecting the best estimator from each of the the grid searches.</p>
+
+  <code>
+    <p>best_esimator = gs.best_estimator_</p>
+  </code>
+
+  <p>Then load the test data and run the same preprocessing on it.</p>
+
+  <code>
+    <pre>
+      testset = pd.read_csv("test.csv")
+      ids = testset['Id']
+      testset = testset.drop('Id', axis=1)
+      testdf = encoder.fit_transform(testset)
+      testdf = pd.get_dummies(testdf, columns=categorical)
+    </pre>
+  </code>
+
+  <p>Before running the imputer on the test data, I needed to make sure the columns in X_train were the same as the columns in the test data frame, as any values present in one and not the other would cause get_dummies to create an imbalance. This script takes care of deleting columns only on the test data as the algorithm wouldn't use them and create dummy columns for ones only in the training set.</p>
+
+  <code>
+    <pre>
+      for col in testdf.columns:
+          if col not in X_train.columns:
+              testdf = testdf.drop(col, axis=1)
+      for col in X_train.columns:
+          if col not in testdf.columns:
+              testdf.insert(X_train.columns.get_loc(col), col, 0)
+      imputeddf = pd.DataFrame(SimpleImputer().fit_transform(testdf), columns=testdf.columns)
+    </pre>
+  </code>
+
+  <p>Lastly, I used the best estimator to predict the results and output them to a csv file and submitted them to Kaggle.</p>
+
+  <code>
+    <pre>
+      result = best_estimator.predict(imputeddf)
+      testdf['Id'] = ids
+      testdf['SalePrice'] = result
+      enddf = testdf['Id', 'SalePrice']
+      enddf.to_csv('submission.csv', index=False)
+    </pre>
+  </code>
+
+  <p>For Kaggle’s scoring, my submissions got the following values referring to the error percentage:</p>
+  <ul>
+  	<li>Ridge - 17.462%</li>
+  	<li>Random Forest - 14.904%</li>
+  	<li>Gradient Boost - 14.171%</li>
+  	<li>XG GridSearch - 15.591%</li>
+  	<li>XG w/300 estimators - 13.415%</li>
+  </ul>
+  <p>I also tried adding back learning rate and alpha to the grid search, with learning rate not changing the results and alpha getting to 14.070%. From these results, it definitely seems like the higher estimator numbers do better. Gradient Boosting seemed to be the best strategy again, but this time XGBoost came out on top.</p>
+
+  <h2>Takeaways</h2>
+  <p>This challenge required a lot more preprocessing when handling the data, such as handling ordinal categories and mismatches between test and training data after encoding. For the next time I run similar algorithms, I'm considering looking into a cloud based option as I wasn't able to run some of the grid search algorithms the way I wanted them. I still don't know where the error was caused on my Scikit-Learn gradient boost model with more estimators, so its possible I should look into Keras or Tensorflow next as well. Or maybe having a h2er machine running the process will fix the error I got. Lastly, the submission scores came from a specific data set, so I'm still not certain a slightly higher score will necessary mean a better algorithm.</p>
+
+  <p>Overall, this data set was a great next step as it expanded on what I did with the Titanic problem and gave me a sample regression problem. The next problem I'll be looking at will be Kaggle's <a href="https://www.kaggle.com/c/digit-recognizer">Digit Recognizer</a> problem which should be an interesting change from the previous two sets I've worked with.</p>
+</body>

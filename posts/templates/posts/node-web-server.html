@@ -1,0 +1,61 @@
+<head>
+  <style type="text/css">
+    code { background-color: gray; color: blue; }
+  </style>
+</head>
+<body>
+  <p>Node.JS is a useful tool for using JavaScript to access a lot more than it normally could. Originally a language only capable of running in a web browser, Node allows for it to be used on the command line allowing for many new options including the ability to spin up a web server. While different users will have different needs and specificities for what they want in a server, everyone will need to create a server and Node can create an HTTP server quickly, in under ten lines of code.</p>
+  <p>When creating an HTTP web server, Node first needs to access its 'http' module, which can be called and assigned using "require", a function that allows a program to pull in code from other files, whether node modules or other code a user built for their project. In this case, http is a module that is built in to node.</p>
+  <code>
+    <p>var http = require('http');</p>
+  </code>
+  <p>Next, a location for the server can be specified using a port and ip address which will be used to allow it to listen to requests to that IP from the specified port.</p>
+  <code>
+    <pre>
+      var port = 3000;
+      var ip = '127.0.0.1';
+    </pre>
+  </code>
+  <p>With the http module and address set, the next step is actually creating the server, conveniently using the http module's createServer function. Create server is a function that will return a server object and accepts another function as an argument. The inner function will be called whenever a request is made by to the server and will take in two additional arguments, a request and a response.</p>
+  <code>
+    <p>var server = http.createServer(function(req, res) {</p>
+  </code>
+  <p>These are Node objects that represent the requests and responses that are sent to and from the server. In this example, the function will not take the specific request object into consideration, only that a request was made. Next, we need to put something inside of the server's inner function for it to run when a request is made.</p>
+  <p>First off, we want to write to the head of the function. Below is a method on the response object that takes in an HTTP status code and object stating the content type to send back to the request as a header.</p>
+  <code>
+    <p>res.writeHead(200, {'Content-Type': 'text/html'});</p>
+  </code>
+  <p>After this, we can call the write function which will send the message inside of it, and the ability to view this message will serve as a good test that our server ran.</p>
+  <code>
+    <p>res.write('listening on http://' + ip + ':' + port);</p>
+  </code>
+  <p>Finally, we call the response object's end function which will cause it to finish handling the request and stream the data in its body, sending the message made using res.write, finishing up the function our server will run when it gets a request. Putting a message into the end function would have the same effect of calling write and then end.</p>
+  <code>
+    <pre>
+        res.end();
+      })
+    </pre>
+  </code>
+  <p>With the server properly created, the last the code will tell our server to listen at the specified IP address and port by calling the server object's build in listen function.</p>
+  <code>
+    <p>server.listen(port, ip);</p>
+  </code>
+  <p>And with that, we have a server up and running in under ten lines of code.</p>
+  <code>
+    <pre>
+      var http = require('http');
+
+      var port = 3000;
+      var ip = '127.0.0.1';
+
+      var server = http.createServer(function(req, res) {
+          res.writeHead(200, {'Content-Type': 'text/html'});
+          res.write('listening on http://' + ip + ':' + port);
+          res.end()
+      })
+    </pre>
+  </code>
+  <p>To double check that it's running, run it with node in the command line and go to the specified IP/port combination to check that the message was rendered.</p>
+  <img src="{% static "images/node-webserver01.jpg" %}">
+  <p>And there it is, a running server. Right now it just prints a message, but what it doesn't print is it's potential.</p>   
+</body>

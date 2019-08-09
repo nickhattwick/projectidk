@@ -1,0 +1,245 @@
+<head>
+  <style type="text/css">
+    code { background-color: gray; color: blue; }
+  </style>
+</head>
+<body>
+  <p>I'm not sure how often I've said to my self and others that I would learn more about data science and start tackling problems and learning algorithms. Some, I would then proceed to start watching a tutorial which I'd quickly lose interest in, and usually, I would do nothing at all. In a couple of my more successful attempts, I'd tackle the Iris dataset and use a Nearest Neighbors algorithm (the only one I had any familiarity with) to predict it and stop there. Part of the reason for this was that, outside of tutorials I wasn't really sure how to apply anything I'd learn and would quickly lose motivation. That's where Kaggle comes in (hopefully). From time to time I'd hear about Kaggle competitions, where people could compete to find the best algorithm to solve a problem. A competition aspect to something I didn't know seemed a bit intimidating, but when I was hit with the inspiration once again to tackle the vague idea of "Machine Learning", I decided to set doing well in a Kaggle competition as a goal, expecting that having some goal would make for a more successful approach. Kaggle also has beginner focused "competitions" without set end dates, so my approach will be to tackle a few of those and figuring out my mistakes on problems that many have tackled already, before trying a regular competition. So far in my approach to learning data science, I've read Andreas Muller's Intro to Machine Learning with Python book, so pretty much all of my current understanding on Algorithms come from from that book. I found it to be the best source for explaining concepts in a way that someone without much of a math background (me) could understand.</p>
+
+  <h2>Approaching The Titanic</h2>
+
+  <p>First, I'll try tackling is Kaggle's <a href="https://www.kaggle.com/c/titanic">Titanic</a> dataset and predict whether or not a passenger would survive the Titanic based on 9 given features. I'll record my approaches until I've done the best I can with the current information, at which point I'll see what more experienced data scientists would have done and what I'm missing in my approach. Additionally, for this challenge I'll be using Scikit-learn only. At the moment, I don't know how much (if any) or a hindrance this will be, but I've got to start somewhere.</p>
+
+  <p>I'll attempt to try and compare (my attempts at implementing) the following kinds of algorithms:</p>
+  <ul>
+  	<li>Nearest Neighbors</li>
+  	<li>Linear</li>
+  	<li>Decision Trees (Gradient Boosted and Random Forest)</li>
+  	<li>SVMs</li>
+  </ul>
+  <h2>The Data</h2>
+
+  <p>The data on the titanic for training consists of 891 passengers along including 12 features:</p>
+  <ul>
+  	<li>PassengerId</li>
+  	<li>Survived</li>
+  	<li>PClass - Passenger Class</li>
+  	<li>Name</li>
+  	<li>Sex</li>
+  	<li>Age - Pass</li>
+  	<li>SibSp - Number of siblings and spouses</li>
+  	<li>Parch - Number of parents and children</li>
+  	<li>Ticket - Ticket number</li>
+  	<li>Fare - How much they paid</li>
+  	<li>Cabin</li>
+  	<li>Embarked - Where they embarked: C, S or Q</li>
+  </ul>
+  <p>The test set of 418 passengers contains these columns except for "Survived", which is what we're trying to predict.</p>
+
+  <h2>Cleaning The Data</h2>
+
+  <p>Before fitting training data to a model, there are a few changes and considerations to be made. First, the data contains null values which causes models to break. Second, the categorical data needs to be encoded since the models can't read text. Third, some of the columns should probably be removed since it's unlikely the models can do anything with names and ids which unique to each passenger.</p>
+
+  <p>To start, I've separated the features in to three categories: ones that are model-ready, ones that need to be encoded and ones that aren't needed at all.</p>
+
+  <code>
+    <pre>
+      df_raw = pd.read_csv('train.csv')
+      safe_columns = ["Survived", "Age", "SibSp", "Parch", "Fare"]
+      need_conversion = ['Sex', "Embarked", "Pclass"]
+      assumed_irrelevant = ["Name", "Ticket", "PassengerId", "Cabin"]
+    </pre>
+  </code>
+
+  <p>The safe columns are all ones with continuous values (or binary for "Survived"), with the ones needing conversion being categorical. In the case of the columns I'm dropping, each seems unique to each customer which would lead to a large number of encoded columns that are only relevant on the training data and I'm expecting would lead to over-fitting. My next steps are to drop the unneeded needed columns and encode the categorical columns.</p>
+
+  <code>
+    <pre>
+      df = df_raw.drop(["Name", "Ticket", "PassengerId", "Cabin"], axis=1)
+      df = pd.get_dummies(df, columns=need_conversion)
+    </pre>
+  </code>
+
+  <p>Next, to handle any null values, I'll use ScikitLearn's Simple Imputer to create reasonable false values.</p>
+
+  <code>
+    <pre>
+      from sklearn.impute import SimpleImputer
+      my_imputer = SimpleImputer()
+      new_df = pd.DataFrame(my_imputer.fit_transform(df))
+    </pre>
+  </code>
+
+  <p>Lastly, in order to handle any outliers, I passed the data through ScikitLearn's MinMaxScaler, which was a step I added as the first step in the pipeline for each algorithm's process.</p>
+
+  <h2>Testing The Algorithms</h2>
+  <p>Initially, I created instances of each algorithm type mentioned and ran them on their own, then with cross validation and a grid search, and finally in the following pipeline, differing with only the algorithm and parameter grid.</p>
+
+  <code>
+    <pre>
+      param_grid = {'ex_param1': [0.001, 0.01, 0.1, 1, 10, 100],
+      'ex__param2': [0.001, 0.01, 0.1, 1, 10, 100]}
+      pipe = Pipeline([("scaler", MinMaxScaler()), ("ex", ExModel())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+
+  <p>X_train and y_train come from the following split</p>
+
+  <code>
+    <p>
+      X_train, X_test, y_train, y_test = train_test_split(new_df[cols], new_df[0], random_state=0)
+    </p>
+  </code>
+
+  <h2>KNN</h2>
+  <p>Despite being the first algorithm I learned and the only one I was familiar with the past year, the nearest neighbors algorithm would consistently perform worse on the testing score, with only the n_neighbors parameter being tuned.</p>
+
+  <code>
+    <pre>
+      param_grid = {"knn__n_neighbors": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+      pipe = Pipeline([("scaler", MinMaxScaler()), ("knn", KNeighborsClassifier())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+
+  <p>Training Set accuracy: 0.81</p>
+  <p>Test Set accuracy: 0.79</p>
+
+  <h2>SVM</h2>
+  <p>Next I tried ScikitLearn's SVM classifier which performed a little better, tuning the C and gamma parameters.</p>
+
+  <code>
+    <pre>
+      param_grid = {'svm__C': [0.001, 0.01, 0.1, 1, 10, 100],
+      'svm__gamma': [0.001, 0.01, 0.1, 1, 10, 100]}
+      pipe = Pipeline([("scaler", MinMaxScaler()), ("svm", SVC())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+
+  <p>Training Set accuracy: 0.82</p>
+  <p>Test Set accuracy: 0.81</p>
+
+  <h2>Linear</h2>
+  <p>For linear, I tried Logistic Regression and LinearSVC functions, tuning the C parameter.</p>
+
+  <code>
+    <pre>
+      param_grid = {'lr__C': [0.001, 0.01, 0.1, 1, 10, 100]}
+      pipe = Pipeline([("scaler", MinMaxScaler()), ("lr", LogisticRegression())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+  <p>The Logistic Regression performed slightly worse than the SVM function.</p>
+
+  <p>Training Set accuracy: 0.80</p>
+  <p>Test Set accuracy: 82</p>
+
+  <p>While the LinearSVC function performed slightly worse than the Logistic Regression.</p>
+
+  <code>
+    <pre>
+      param_grid = {'svm__C': [0.001, 0.01, 0.1, 1, 10, 100]}
+      pipe = Pipeline([("scaler", MinMaxScaler()), ("svm", LinearSVC())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+
+  <p>Training Set accuracy: 0.80</p>
+  <p>Test Set accuracy: 79</p>
+
+  <h2>Decision Trees</h2>
+  <p>From running single decision trees on the dataset, it already looked to be a successful method, scoring with 80 percent accuracy, higher than most of the single iterations of algorithms I was running at the time without cross validation, and the random forests and gradient boosted trees I ran the pipeline had better results as well.</p>
+
+  <p>First, off the Random Forest classifier using n_estimators as the only parameter in the param grid. While changing parameters with grid search seems like a good strategy in general, I think this might be a parameter that it's wrong to use grid search on, since my understanding is that more estimators will always be better and the trade off is computational power.</p>
+
+  <code>
+    <pre>
+      param_grid = {'rf__n_estimators': [50, 75, 100, 200, 300]}
+      pipe = Pipeline([("scaler", MinMaxScaler()), ("rf", RandomForestClassifier())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+
+  <p>Chosen value of N_estimators: 200</p>
+  <p>Training Set accuracy: 0.80</p>
+  <p>Test Set accuracy: 0.83</p>
+
+  <p>Going with the assumption that running a grid search on n_estimators is unnecessary since the trade off is between cost to run and accuracy as opposed to between over-fitting and generalizing, I decided to fix n_estimators at 300 to run the Gradient Boosting Classifier, using the grid search to tune the learning rate and max depth.</p>
+
+  <code>
+    <pre>
+      param_grid = {'gb__n_estimators': [300], 'gb__learning_rate': [0.001, 0.01, 0.1, 1, 10, 100], 'gb__max_depth': [2, 3, 4, 5, 6, 7, 8]}
+      pipe = Pipeline([("scaler", MinMaxScaler()), ("gb", GradientBoostingClassifier())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+
+  <p>Training Set accuracy: 0.83</p>
+  <p>Test Set accuracy: 0.83</p>
+
+  <p>Lastly, I decided to try out an algorithm called XGBoost, that was mentioned to be quite effective even on its own. I tuned the eta (learning rate) and gamma parameters and ultimately got the best results of anything put through the pipeline on the training set.</p>
+
+  <code>
+    <pre>
+      from xgboost import XGBClassifier
+      param_grid = {'xg__eta': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], 'xg__gamma': [0.001, 0.01, 0.1, 1, 10, 100]}
+      pipe = Pipeline([("scaler", MinMaxScaler()), ("xg", XGBClassifier())])
+      gs = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+      gs.fit(X_train, y_train)
+    </pre>
+  </code>
+
+  <p>Training Set accuracy: 0.82</p>
+  <p>Test Set accuracy: 0.85</p>
+
+  <h2>Submitting the Results</h2>
+  <p>After running the algorithms on the test set from my split, I chose some of the h2er ones to submit to Kaggle and check the results on their test set. This process involved saving the grid_search object's best_estimator_ parameter to a variable,</p>
+  <code>
+    <p>best_esimator = gs.best_estimator_</p>
+  </code>
+
+  <p>loading the test data and running the same preprocessing on it</p>
+  <code>
+    <pre>
+      testset = pd.read_csv("test.csv")
+      exid = testset['PassengerId']
+      tdf = testset.drop(["Name", "Ticket", "PassengerId", "Cabin"], axis=1)
+      tdf = pd.get_dummies(tdf, columns=need_conversion)
+      imputer_the_second = pd.DataFrame(SimpleImputer().fit_transform(tdf), columns=tdf.columns)
+    </pre>
+  </code>
+  <p>then removing the floats from the output, so they're binary results and fitting the best_estimator_ with the new data, and outputting the predicted results to a csv file containing the PassengerId.</p>
+  <code>
+    <pre>
+      pd.options.display.float_format = '{:,.0f}'.format
+      result = best_estimator.predict(imputer_the_second)
+      tdf['PassengerId'] = exid
+      tdf['Survived'] = result
+      endcols = ['PassengerId', 'Survived']
+      enddf = tdf[endcols]
+      enddf.to_csv('firstsubmissionx.csv', index=False)
+    </pre>
+  </code>
+
+  <p>For Kaggle's scoring, my submissions got the following values:</p>
+  <ul>
+  	<li class="p1">Random Forest - .76555</li>
+  	<li class="p1">SVC - .77990</li>
+  	<li class="p1">Gradient Boosted Trees - 0.79425,</li>
+  	<li class="p1">Logistic Regression - 0.75598</li>
+  	<li>XGboost - 0.77033</li>
+  </ul>
+  <p>The gradient boosted tree ended up getting the highest score on the test set, despite the XGBoost appearing to be the best in testing.</p>
+
+  <h2>Takeaways</h2>
+  <p>Overall, this felt like a good process to go through for getting started, although I still have questions about my results and how successful this attempt was. Part of it is due to being new and having a small understanding of each of the algorithms I used. I can understand the reasons for using a random forest over a single decision tree, and using a grid search and cross validation over single examples, but am confused as to why the trees seemed more effective than a linear model, and with the SVC model being so close in percentage, how much was just luck or parameter tuning. Speaking of luck, while cross validation could split up the training and test sets in different ways, for Kaggle, I was only evaluating one data set. There seem to be some people who posted 100 percents, but I don't even know if I should believe an algorithm could consistently predict that from the data given. If I could receive multiple sets to test on, and average them, would the results be different. Should I trust my test results over the Kaggle score or vice versa? From here, I'll take a look at how others approached the problem and see if there's an accepted solution for what I should have done. My next step will be either writing an article looking back over the process or beginning on Kaggle's House Prices dataset to try my hand at a regression problem.</p>
+</body>

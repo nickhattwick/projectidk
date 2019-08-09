@@ -1,0 +1,87 @@
+<head>
+  <style type="text/css">
+    code { background-color: gray; color: blue; }
+  </style>
+</head>
+<body>
+  <p>The next data structure, I'll be looking at is the tree data structure. Similar to a linked list, this data structure is represented by nodes referencing each other and a whole tree can be traversed after gaining access to its root node. The main difference is in shape of the data structure the tree nodes represent. Rather than a linked list which follows one direction, a tree data structure can branch out in multiple directions with each node potentially multiple child nodes. A popular implementation of a tree is a binary tree in which each node can have up to 2 children, a left value and a right value.</p>
+  <code>
+    <pre>
+              1
+            /   \
+           2     3
+          / \   / \
+         4   5 6   7
+    </pre>
+  </code>
+  <p>In code, each node object would have a value and a left and right property referencing the child nodes.</p>
+  <code>
+    <pre>
+      class Node:
+          def __init__(self, name):
+              self.name = name
+              self.left = None
+              self.right = None
+    </pre>
+  </code>
+  <p>If given a pointer called root which refered to 1 in the above tree, you could access 2 by calling root.left and 3 by calling root.right. With those references, you could access nodes 4 through 7 with the same properties on 2 and 3.</p>
+  <p>As a tree made up of separate nodes wouldn't necessarily have a length property, recursion is a natural fit for traversing through the branches of a tree. Three traversal itself can be done with done either depth-first or breadth-first, with depth-first going as far as it can down each path before moving on to another. Breadth-first, on the other hand, traverses the tree row by row and requires a somewhat different process for maintaining the order. First, let's take a look at depth-first algorithms, which are more similar to the recursive methods used in linked lists.</p>
+  <h2>Depth-First Traversal</h2>
+  <p>When traversing a tree depth first, there are three main paths to choose from, which are known as pre-order, post-order and in-order traversal. All three hit nodes from left to right, but the names of the orders refer to when they access the current node in relation to its left and right values. Pre-order access each node's data before moving on to the children, accessing nodes to the left of it and then nodes to the right of it. The following code prints the values of a tree's nodes using pre-order traversal.</p>
+  <code>
+    <pre>
+      def preOrder(root):
+          print(root.data)
+          if root.left:
+              preOrder(root.left)
+          if root.right:
+              preOrder(root.right)
+    </pre>
+  </code>
+  <p>With our tree from earlier, pre-order would print values in the order, 1, 2, 4, 5, 3, 6, 7. While pre-order accessing each node before calling another recursive function, post-order waits to access the current data until after the calls have finished.</p>
+  <code>
+    <pre>
+      def postOrder(root):
+          if root.left:
+              postOrder(root.left)
+          if root.right:
+              postOrder(root.right)
+          print(root.data)
+    </pre>
+  </code>
+  <p>This means that the root node wouldn't be accessed until all other data points have been accessed and would first return nodes without left and right values. In our earlier tree, this would print 4, 5, 2, 6, 7, 3, 1. Lastly, in-traversal access nodes to the left of the current node, then the current node, and then the nodes to the right.</p>
+  <code>
+    <pre>
+      def inOrder(root):
+          if root.left:
+              inOrder(root.left)
+          print(root.data)
+          if root.right:
+              inorder(root.right)
+    </pre>
+  </code>
+  <p>This method resembles what it would like if all the imaginary branches between nodes disappeared and the numbers fell vertically into a straight line. With the tree above, this would print 4, 2, 5, 1, 6, 3, 7.</p>
+  <p>Even though data is accessed in different directions, the core of these functions is the same. The functions all access the node's data and recursively call themselves on the node's left and right children. But if the core of a depth-first algorithm is going all the way down one path before exploring the other options, how could each row of the tree be traversed from left to right before moving on to another one?</p>
+  <h2>Breadth-First Traversal</h2>
+  <p>Breadth-first algorithms require a different approach. While printing the first three values in order would be pretty straght forward, it gets a bit trickier on the third row. Starting with the root node, you'd print the root node's data, then it's left value and then it's right value. However, with the third row, however, you'd then nead to get back to the left value's children, then the right value's children and continue from there. Depth-first traversal is more straightforward using recursion as follows the branches set by the tree without jumping around or skipping over nodes, with the distance between the last node of a row and the first node of the next getting further and further appart. You can't rely on the node's to know where to go, but luckily another data structure can help make this task much simpler.</p>
+  <p>A queue is the perfect data structure for helping with breadth-first traversal. While going from left to right, you can access each node's left and right children and put them in order in the queue, for them to be accessed in order, row by row.</p>
+  <code>
+    <pre>
+      def levelOrder(root):
+          print(root.data)
+          nodeOrder = []
+          if root.left:
+              nodeOrder.append(root.left)
+          if root.right:
+              nodeOrder.append(root.right)
+          while len(nodeOrder) &gt; 0:
+              print(nodeOrder[0].data)
+              if nodeOrder[0].left:
+                  nodeOrder.append(nodeOrder[0].left)
+              if nodeOrder[0].right:
+                  nodeOrder.append(nodeOrder[0].right)
+              nodeOrder.pop(0)
+      </pre>
+    </code>
+    <p>The above code works by printing each data point and then appending it's children from left to right into a queue. After each node appends it's children to a queue, the current node is removed and the program moves on to the queue's next value. It continues to run until the queue is empty, and since each node appends its children before removing itself, the queue won't be empty until it's printed the last value in the last row.</p>
+    <p>With our original tree, this would print 1 through 7 in order.</p>

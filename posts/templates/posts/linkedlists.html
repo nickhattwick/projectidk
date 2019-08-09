@@ -1,0 +1,170 @@
+<head>
+  <style type="text/css">
+    code { background-color: gray; color: blue; }
+  </style>
+</head>
+<body>
+  <p>Going back to basic data structures, I've spent a decent amount of time on Hacker Rank's linked list problems this weekend. While I knew what a linked list was since I first learned about it, it's been good going through problems using them and reminding myself how to manipulate them or get the information you want.</p>
+  <h2>Linked List Node</h2>
+  <p>As the name suggests, a linked list is a method of creating a list or ordered collection of objects. One aspect of this data structure is that's actually made up of a collection of nodes which consist of a piece of data and a reference to the next node. With this reference, a series of separate nodes can provide similar functionality to a list or array without defining array size first. While a doubly linked list would make tasks, I'll start off showing what a  singly linked list can do.</p>
+  <p>Here's an example of a JavaScript class implimentation of a singly linked list node.</p>
+  <code>
+    <pre>
+      class Node {
+        constructor(data, next=null) {
+          this.data = data;
+          this.next = null;
+        }
+      }
+    </pre>
+  </code>
+  <p>Usually, nodes are created without a current next value when the next link hasn't been created yet.<p>
+  <h2>Traversing Nodes - From head to tail</h2>
+  <p>Generally there will be a head node that starts of the linked list and allows you to access all the data contained. While the linked list has the advantage of easy manipulation by being separated, it also lacks a length property requiring while loops or recursion to traverse through to the tail end. Traversing from the head to tail is required if you want to print all its data, add a node to the end, or even to get the lists length.</p>
+  <p>Getting to the end of the node can be done with a bit of code that sets a reference to the head node equal to its next node as long as the current node has a next.</p>
+  <code>
+    <pre>
+      var current = head;
+      while (current.next) {
+            //access each node here
+            current = current.next;
+        }
+    </pre>
+  </code>
+  <p>If you wanted to print or call a function on the elements in order, a function call could be called on each current before setting it to next. Otherwise, after the while loop is finished, current would refer to the last element in the array.</p>
+  <h2>Inserting a node</h2>
+  <p>If you were inserting a node at the end, you could then do so by setting current.next after getting access to tail.</p>
+  <code>
+    <pre>
+      current.next = new Node(data);
+    </pre>
+  </code>
+  <p>Adding to the requires creating a new node and setting the tail node to refer to it. On the opposite side, setting a new head requires creating a new head and telling it to reference the previous head node and changing a the variable that references the head to point to this new node.</p>
+  <code>
+    <pre>
+      var newhead = new Node(data);
+      newhead.next = head;
+      head = newhead;
+    </pre>
+  </code>
+  <p>If you wanted to insert a node in a specific place in a linked list, that would require storing finding the existing node you want to put the new node after, setting the new node's "next" value to the existing node's next value, and setting the existing node's next value to the new node. In the following code, current refers to the value the new node will be inserted after</p>
+  <code>
+    <pre>
+      if (current.next) {
+          newNode.next = current.next;
+      }
+      current.next = newNode;
+    </pre>
+  </code>
+  <h2>Deleting Nodes</h2>
+  <p>Where adding a node to a linked list is done by adding references to and from other elements in the list, deleting a node is done by removing any refences to the node.</p>
+  <p>If you want to delete a node at a certain position, you can access the previous node by accessing the next property until it's one place before the node position you want to delete.</p>
+  <code>
+    <pre>
+      for (var i = 0; i &lt; position - 1; i++) {
+          if (current.next) {
+              current = current.next;
+          }
+      }
+    </pre>
+  </code>
+  <p>From here, the three scenarios that can occur are the same as the insert. Is the position the head, tail or somewhere in between.</p>
+  <p>In the case of the head, set the refence of the head to its next value. This check can run before the above loop.</p>
+  <code>
+    <pre>
+      if (position == 0) {
+          head = current.next;
+          return head;
+      }
+    </pre>
+  </code>
+  <p>When the node is between two nodes, set current's (the node before) next value to the node to be delete's next value, removing it from the linked list.</p>
+  <code>
+    <pre>
+      if (current.next.next) {
+          current.next = current.next.next
+      }
+    </pre>
+  </code>
+  <p>This statement evaluating to false is the case for when the position is the tail.</p>
+  <code>
+    <pre>
+      else {
+          current.next = null;
+      }
+    </pre>
+  </code>
+  <h2>From tail to head</h2>
+  <p>Traversing the linked list from head to tail is by repeatedly accessing the next value of the current node and calling any functions that need to access the data in order in the loop before changing the current node to the next one. But what if you wanted to start at the tail and go to the head. In the case of printing elements in reverse order, this would require printing the current node's data after printing the next one. If the reference is changed as with before, it wouldn't be easy to do this.</p>
+  <p>That's where a recursive function can come into play. Passing next into a new function that will print it's current value after kicking off another instance of the function on the next node, allows for accessing node's data in reverse order.</p>
+  <code>
+    <pre>
+      function reversePrint(node) {
+          if (node.next) {
+              reversePrint(node.next);
+          }
+          console.log(node.data);
+      }
+    </pre>
+  </code>
+  <p>If you just need to access the data in reverse order, that will do the trick, but what if you want to reverse the linked list? That requires accessing the tail node in the innermost call and appending to it in every function call before it, in reverse order. The following code sets the tail node to a new head value and appends each node to the tail in reverse order, returning the new head.</p>
+  <code>
+    <pre>
+      function reverse(head) {
+        var current = head;
+        var newhead;
+        if (current.next) {
+            newhead = reverse(current.next);
+            current.next = null;
+            var tracker = newhead;
+            while (tracker.next) {
+                tracker = tracker.next;
+            }
+            tracker.next = current;
+        }
+        else {
+            newhead = current;
+        }
+        return newhead;
+      }
+    </pre>
+  </code>
+  <h2>Doubly Linked Lists</h2>
+  <p>At the cost of some extra work with reference manipulation when changing a list, a doubly linked list adds a reference to the node before it, which takes away the need for recursion when accessing the list backwards.</p>
+  <code>
+    <pre>
+      class Node {
+        constructor(data, prev=null, next=null) {
+          this.data = data;
+          this.prev = prev;
+          this.next = next;
+        }
+      }
+    </pre>
+  </code>
+  <h2>Inserting a node</h2>
+  <p>When inserting a node into a doubly linked list, the next value of the previous node and the prev value of the next node will need to be changed to reference the new node, which will need to reference them respectively. In the case that the node is to be inserted at the head.</p>
+  <code>
+    <pre>
+      insert.next = current;
+      current.prev = insert;
+    </pre>
+  </code>
+  <p>If between two nodes, after getting the current variable referring to the node before the insert location</p>
+  <code>
+    <pre>
+      insert.prev = current;
+      insert.next = current.next;
+      current.next.prev = insert;
+      current.next = insert;
+    </pre>
+  </code>
+  <p>lastly, if setting a new tail node</p>
+  <code>
+    <pre>
+      insert.prev = current;
+      current.next = insert;
+    </pre>
+  </code>
+  <p>
+</body>

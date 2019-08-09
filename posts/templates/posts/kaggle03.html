@@ -1,0 +1,138 @@
+<head>
+  <style type="text/css">
+    code { background-color: gray; color: blue; }
+  </style>
+</head>
+<body>
+  <p>For the next of Kaggle's beginner data sets, I'll be training models to recognize digits from images of them. This is the first image based problem I'll be tackling. Because we're dealing with images, the data here won't be as human readable as the previous ones, as it would be hard for a person to make out an image to details on the shading and order of each pixel. On the other hand, a computer would need to read the image data in a different format than humans in order to process it. A few areas in the process are different from the last problems I worked on. First, this is my introduction to neural networks and to deep learning algorithms, and my first time working with Tensorflow and its high level api, Keras. With my last dataset, my computer was already having trouble running some of Scikit-Learn's regression algorithms, so I'll be running some algorithms on the cloud. For starting my learning on Neural Networks, I've been going through Udacity's free course, <a href="https://www.udacity.com/course/intro-to-tensorflow-for-deep-learning--ud187">Introduction to Tensorflow for Deep Learning</a> by the Tensorflow team, and most of what I know so far and model configurations I've tested have come from there. It's been a pretty good introduction, though my knowledge on deep learning is still pretty basic.</p>
+  <h2>The Data</h2>
+  <p>The data in this case represents 42000 flattened images of hand-written digits from a popular dataset called MNIST. It uses 784 columns representing pixels 1 through 784 to represent a 28 by 28 pixel image, going left to right, line by line. The column values are a number between 0 and 255 representing how dark the pixel is. The data in the training set includes a label to tell the algorithm which digit (0 - 9) the pixels represent.</p>
+  <h2>A Simple Neural Network</h2>
+  <p>While Tensorflow is designed to work with tensor objects, I ran my first model using a Numpy array to make sure that I could complete a basic prediction. I used pandas to read the data from the csv and took the numpy arrays of its features and labels.</p>
+  <code>
+    <pre>
+      data = pd.read_csv('train.csv')
+      labels = data['label'].values
+      data = data.drop('label', axis=1)
+      features = data.values
+      scaler = StandardScaler()
+      features = scaler.fit_transform(feats)
+    </pre>
+  </code>
+  <p>After fitting the features through Scikit-Learn's Standard Scaler, I loaded a sequential model to run the data on. As I currently understand it, the sequential model is the the object that will handle the process of running a neural network, taking in input features and labels, and tuning the parameters of the functions it runs on them to reach the desired output, adjusting based on performance to build its model. These functions that are being tuned are passed in to the sequential as layers into the model, and the data will be passed through each layer to calculate the output.</p>
+
+  <code>
+    <pre>
+      model = tf.keras.Sequential([
+      tf.keras.layers.Dense(64, activation='relu')
+      tf.keras.layers.Dense(64, activation='relu')
+      tf.keras.layers.Dense(10, activation='softmax')
+      ])
+    </pre>
+  </code>
+
+  <p>The three layers in the above model are dense or fully-connected meaning each node in that layer uses all of the outputs from the previous layers. The number of nodes created for the layer are the first input of that layer, with the second being an activation function to add power to the layer. ReLU stands for Rectified Linear Unit and helps the layer to process non-linear functions by negating the effect of negative input values. The last layer runs ten nodes with a softmax activation which will calculate the probabilities of the input belonging to each label class.</p>
+
+  <p>After defining the model, compile it, specifying a function it will use optimize its parameters and how it will calculate loss. Then fit it with the data, set a number of epochs and a batch size. The number of epochs is how many times it runs over the dataset while training the model, while the batch size determines how many rows are processed at a time.</p>
+
+  <code>
+    <pre>
+      model.compile(optimizer='adam',
+      loss='sparse_categorical_crossentropy',
+      metrics=['accuracy'])
+      model.fit(features, labels,
+      epochs=50,
+      batch_size=128)
+    </pre>
+  </code>
+  <p>With the model fitted, I loaded the test data and use it to predict the model and output the predictions to a csv file.</p>
+  <code>
+    <pre>
+      testdf = pd.read_csv('test.csv')
+      ids = testdf.index + 1
+      test_scaled = scaler.fit_transform(testdf)
+      preds = model.predict_classes(test_scaled)
+      submission = pd.DataFrame({'ImageId':ids, 'Label':preds})
+      submission.to_csv('7step100shuffle.csv', index=False)
+    </pre>
+  </code>
+  <h2>First Model's Submissions</h2>
+  <p>I went through a few iterations on the parameters and process for the first model. Initially, I was splitting the dataset into test and train sets, which I'd been doing for all of my submissions in the previous one. While good for comparing scores in the Jupyter notebook and testing, it definitely seems possible that I could have gotten better results if I had fitted the best performing models with more data before submitting. I also tried one iteration without scaling the data. It didn't go well.</p>
+  <ul>
+  	<li>Unscaled data with training split only - 0.10771</li>
+  	<li>Scaled Training split only - 0.96357</li>
+  	<li>All data scaled - 0.96785</li>
+  </ul>
+  <p>In this case there was a slight improvement for using the whole set and a huge improvement for scaling.</p>
+  <h2>Convolutional Neural Network</h2>
+  <p>The previous model was small enough for my computer to run without having to wait for very long, but once adding convolutions, the process on my computer went from taking minutes to estimating 10 plus hours. Attempts to let my laptop take its time usually resulted in it heating up too much and progress stopping. I tried to run the process on AWS's Sumerian, but that also was estimating ten plus hours that I would be paying for, and since I wanted to run multiple iterations, while being charged a couple dollars an hour, it didn't seem like a good solution.</p>
+  <p>I ended up using Google's Colab to run the following model. The GPU setup on the site was good enough to handle running the networks on MNIST at much faster speeds. My computer doesn't have a GPU and I was trying Sumerian's lowest GPU option, so while I'm not certain yet of Colab's limitations, it worked fine for what I needed to do here.</p>
+  <p>The Sequential Model in this example is as follows</p>
+
+  <code>
+    <pre>
+      model = tf.keras.Sequential([
+      tf.keras.layers.Conv2D(32, (3,3), padding='same', activation=tf.nn.relu,
+      input_shape=(28, 28, 1)),
+      tf.keras.layers.MaxPooling2D((2, 2), strides=2),
+      tf.keras.layers.Conv2D(64, (3,3), padding='same', activation=tf.nn.relu),
+      tf.keras.layers.MaxPooling2D((2, 2), strides=2),
+      tf.keras.layers.Flatten(),
+      tf.keras.layers.Dense(128, activation=tf.nn.relu),
+      tf.keras.layers.Dense(10, activation=tf.nn.softmax)
+      ])
+    </pre>
+  </code>
+
+  <p>The convolution part of the neural network comes in at the first layer, which is applying a filter (3 by 3 pixels in this case) to transform the input. Then it's passed through a The results from this are passed through into a max pooling layer, which slides a 2 pixel by 2 pixel filter across the image, creating a simpler image by using the largest number in each filter. This process is repeated again, before the image is flattened and passed through a dense layer and finally softmax, as with the previous model.</p>
+  <p>Because the two 2D convolutions require a 4D tensor as input, while the data we're given is already flattened, a bit more preprocessing is required to run this model. After loading and scaling the data as before, the numpy array can be converted into a 4D tensor by reshaping it and then converting it with a Tensorflow function.</p>
+  <code>
+    <pre>
+      features = np.reshape(features, (-1, 28, 28, 1))
+      label_tensor = tf.convert_to_tensor(labels)
+      feature_tensor = tf.convert_to_tensor(features)
+      dataset = tf.data.Dataset.from_tensor_slices((feature_tensor, label_tensor))
+    </pre>
+  </code>
+
+  <p>Turning the feature and label tensors into a Tensorflow dataset gives it access to features to help manipulate it, such as batching and shuffling. I tried running the algorithm without shuffling it, it ended up predicting all outputs as 2 and got a very poor outcome as such. The dataset also processed a bit quicker.</p>
+
+  <code>
+    <pre>
+      dataset = dataset.repeat().shuffle(42000).batch(32)
+    </pre>
+  </code>
+
+  <p>This will allow the dataset to keep being processed on shuffled version of itself, in batches of 32 samples at a time. This dataset can be fit into the model as a single parameter. This time it requires a "steps_per_epoch" parameter which is the number of batches it will run during each epoch.</p>
+
+  <code>
+    <pre>
+      model.compile(optimizer='adam',
+                    loss='sparse_categorical_crossentropy',
+                    metrics=['accuracy'])
+      model.fit(dataset,
+                epochs=20,
+                steps_per_epoch=math.ceil(42000/32))
+    </pre>
+  </code>
+
+  <p>After loading the test data, it will need to be reshaped as well before being used to predict the results.</p>
+
+  <code>
+    <pre>
+      test_scaled = np.reshape(test_scaled, (-1, 28, 28, 1))
+      preds = model.predict_classes(test_scaled)
+    </pre>
+  </code>
+
+  <h2>CNN Results</h2>
+  <p>While the results from the previous model was quite high with 0.96785, adding convolutions added a couple of percentage points in this case, although at the cost of being a lot harder to process.</p>
+  <ul>
+  	<li>Not Shuffled CNN w/20 epochs - 0.09614</li>
+  	<li>CNN w/20 epochs - 0.98500</li>
+  	<li>CNN w/50 epochs - 0.98771</li>
+  	<li>CNN w/100 epochs - 0.98685</li>
+  </ul>
+  <h2>Takeaways</h2>
+  <p>My questions going in to this were "What is a neural network and how can I build one". I have a basic pipeline and now how to build a couple of specific models. Before it seemed like I was going through a list of algorithm types and trying them out, but now I'm looking at a model shell and wondering how I can fill it in. There are other layer types with activation functions and features akin to convolutions, I haven't considered yet. The models can be optimized in different ways as well. Outside of the models itself, a process similar to a grid search for tuning parameters such as number of nodes or epochs could help. I hesitated here for time and since the results seemed to be effective already. I'll still need to look into cloud solutions as well, since it seems likely that I'll want to run even more intensive models that will be harder to run. Both models worked well on this dataset, but this is also a dataset with simple shapes and no colors. The next problem is attempting to identify faces, which should build on the image processing process. What will be involved with solving a more detailed image set that wasn't involved here?</p>
+</body>

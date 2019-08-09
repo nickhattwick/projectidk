@@ -1,0 +1,199 @@
+<head>
+  <style type="text/css">
+    code { background-color: gray; color: blue; }
+  </style>
+</head>
+<body>
+  <p>Over the course of my coding journey I've jumped in and out of JavaScript frameworks such as Angular, React and Vue. All serve a similar purpose as a framework, giving a method of simplifying and organizing JavaScript code and providing functionality with framework specific methods such as Vue's "v" and Angular's "ng" prefixes to methods that add powerful functionality to the front end. This post will focus on comparing the structures of the different frameworks rather than their speed/performance which may be other reasons to choose one over another. I'll be using code examples from the frameworks' official tutorials to avoid going off the rails.</p>
+  <h2>Vue.js</h2>
+  <p>First off, let's take a look at the comparatively new VueJS. For it's simplest functionality, including a script linking to a CDN and javascript file allows you to display data from Vue.</p>
+  <h2>Functionality with Vue</h2>
+  <p>Label a tag with a chosen ID and create a "Vue" instance in the javascript file referencing it. This Vue instance is the core building block of Vue.</p>
+  <code>
+    <pre>
+      var app = new Vue({
+          el: '#app',
+          data: {
+              message: 'Hello World',
+              image: './assets/example.jpg',
+              count: 0
+          }
+      })
+    </pre>
+  </code>
+  <p>The Vue instance is created by passing options into a new Vue object, configuring what it can do. It's first argument, 'el' references the DOM element it will be tied to, in this case elements with an ID of 'app.' The data element contains properties stored in the Vue instance that can be accessed as expressions in the xml or from the Vue's methods. The following xml code would print the product and description from instance using double brackets to create an expression.</p>
+  <code>
+    <pre>
+      &lt;div id="app"&gt;
+        &lt;h1&gt;&#123;&#123; message &#125;&#125;&lt;/h1&gt;
+      &lt;/div&gt;
+    </pre>
+  </code>
+  <p>It's pretty easy to include variables as the content of an element, but if you want to include a variable inside the element tags themselves, you'll need to use the v-bind directive which can be called simply by placing a colon before the variable your defining. The following code will look for the image property of the Vue instance's data object instead of looking for the string image as a path thanks to the colon before 'src.'</p>
+  <code>
+    <p>&lt;img :src="image" /&gt;<p>
+  </code>
+  <p>
+  This method can be used to dynamically choose other aspects specified in tags such as class or style. The Vue instance contains other categories besides the data object. It's 'methods' object allows you to define methods that can be called as needed which can also manipulate the data within the app.
+  </p>
+  <code>
+    <pre>
+      methods: {
+          increaseCount() {
+            this.count += 1
+          }
+      }
+    </pre>
+  </code>
+
+  <p>You can use elements to call these methods through events using the v-on directive specified by the shorthand '@.' The following example will create a button that will call addToCart when clicked.</p>
+
+  <code>
+    <p>&lt;button @click="increaseCount"&gt;Increase Count&lt;/button&gt;</p>
+  </code>
+
+  A couple other features worth mentioning here are conditional rendering with the 'v-if', 'v-else', and 'v-show'. The following if/else block would check for the 'inStock' property of data and display the 'v-if' block if true, or the v-else block if false.
+
+  <code>
+    <pre>
+      &lt;p v-if="flag"&gt;Flag is True&lt;/p&gt;
+      &lt;p v-else&gt;No Flag&lt;/p&gt;
+    </pre>
+  </code>
+
+  <p>Similarly, a 'v-show' block will display only if the condition is true.</p>
+
+  <code>
+    <p>&lt;p v-show="flag"&gt;Flag!&lt;/p&gt;</p>
+  </code>
+
+  You can also render each object in a list with a 'v-for' directive, in this case a list item looking at an items list in data.
+
+  <code>
+    <pre>
+      &lt;li v-for="item in items"&gt;{{ item }}&lt;/li&gt;
+    </pre>
+  </code>
+  <p>There are a lot more directives and features I could talk about, but for the most part what's here should cover Vue's basic functionality for building a page with more situation specific features covered in the documentation.</p>
+  <h2>Vue's Component Structure</h2>
+  <p>While the above gives you the core functionality, a large app could get messy without structure. Vue components help you to organize similar functionality into blocks that can be called as elements in html, allowing for props to be passed in and make it easy to reuse code and organize the files. Components are Vue instances that can be called and reused. In addition to the properties shown in the above instances, they also have a template property which contains a string of XML to be displayed when the component is called. The following creates a component.</p>
+  <code>
+    <pre>
+      Vue.component('item-list', {
+        data: function () {
+          return {
+            items: ['necklace', 'wallet', 'rabbit']
+          }
+        },
+        template: '&lt;ul&gt;&lt;li v-for="item in items"&gt;{{ item }}&lt;/li&gt;&lt;/ul&gt;'
+      })
+    </pre>
+  </code>
+  <p>This can then be called within a Vue enabled tag with the Vue instance still being required.</p>
+  <code>
+    <pre>
+      &lt;div id="app"&gt;
+      &lt;/div&gt;
+    </pre>
+  </code>
+  <p>While a component can have its own data, it can also specify allowed props and then be called with them, allowing for higher level control of data that's then passed down into smaller components.</p>
+  <code>
+    <pre>
+      Vue.component('item-list', {
+        props: {
+          items: {
+            type: Array,
+            required: true
+          }
+        },
+        template: '&lt;ul&gt;&lt;li v-for="item in items"&gt;{{ item }}&lt;/li&gt;&lt;/ul&gt;'
+      })
+    </pre>
+  </code>
+
+  This would allow the component to be passed the items as a prop from its parent, the base Vue instance as follows.
+
+  <code>
+    <pre>
+      &lt;div id="app"&gt;
+
+      &lt;/div&gt;
+    </pre>
+  </code>
+
+  Vue components can also be called from the template in other Vue components allowing for easier structuring of pages and lists.
+
+  <h2>Angular</h2>
+  Since it's original version of Angular 1 or AngularJS, Angular has moved away from a tool kit of pieces that are easy to fit into an existing web app and more into a structure that controls how the app is built with the framework requiring a specific file structure to compile into code. Vue and AngularJS acted more like libraries you could use functions from in comparison to Angular's highly opinionated framework which is much more controlling with a mandatory organizational structure.
+
+  Angular apps are divided into Modules with components consisting of an HTML, CSS and a TypeScript. Unlike the above Vue example, where the JavaScript file and Vue can be added normally as scripts, the Angular app will take care of putting together the three files with a reference in TS to the HTML/CSS code.
+
+  app.component.ts referencing it's HTML/CSS and exporting a class with a title.
+  <code>
+    <pre>
+      import { Component } from '@angular/core';
+
+      @Component({
+        selector: 'app-root',
+        templateUrl: './app.component.html',
+        styleUrls: ['./app.component.css']
+      })
+      export class AppComponent {
+        title = 'Example';
+      }
+    </pre>
+  </code>
+
+  This simplifies the code, but also relies more on the Angular framework to serve and compile it.
+
+  This structural change is the biggest difference and ultimately as a front end framework, most of the features are the same. You can call properties set in a component's TS file in the HTML with double brackets. Component's function the same way by creating a contained set of HTML and JavaScript that can be called in its parent elements as tags.
+
+  <code>
+    <pre>
+      &lt;div style="text-align:center;"&gt;
+        &lt;h1&gt;
+          {{ title }}
+        &lt;/h1&gt;
+
+      &lt;/div&gt;
+    </pre>
+  </code>
+
+  The base parent component can use a app.module.ts file to handle registering added components or importing modules to add additional features.
+
+  <code>
+    <pre>
+      import { BrowserModule } from '@angular/platform-browser';
+      import { NgModule } from '@angular/core';
+      import { AppRoutingModule } from './app-routing.module';
+      import { AppComponent } from './app.component';
+      import { ExampleComponent } from './example/example.component';
+
+      @NgModule({
+        declarations: [
+          AppComponent,
+          ExampleComponent
+        ],
+        imports: [
+          BrowserModule,
+          AppsRoutingModule,
+        ],
+        bootstrap: [AppComponent]
+      })
+      export class AppModule { }
+    </pre>
+  </code>
+
+  This will declare what components are being used in the app along with services from different Angular modules that will be used to add features to the site. As you can see with routing and browsing, imports will be necessary. This root module tells Angular how to build the app.
+
+  Similar to Vue's methods, Angular has directives for conditional rendering such as *ngFor, *ngIf and *ngShow as well. Which work by calling the directive like so.
+
+  <code>
+    <pre>
+      &lt;li *ngFor="let hero of heroes"&gt;
+    </pre>
+  </code>
+
+  <h2>Summary</h2>
+  Overall, you can achieve similar results with either framework. The big difference will be how code is organized, with Angular forcing a code structure that relies on learning a different way to write and with Vue being closer to standard JavaScript and allowing a more optional structure. Both organize into components that are similar conceptually, combining HTML and JavaScript code into reusable portions, and both use directives to handle conditional logic. They both have CLI's which can help generate components in the desired structure, although this is more necessary in Angular. Either way, which ever you choose, you'll be able to accomplish roughly the same results even in the structure is different.
+</body>

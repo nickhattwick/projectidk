@@ -1,0 +1,70 @@
+<head>
+  <style type="text/css">
+    code { background-color: gray; color: blue; }
+  </style>
+</head>
+<body>
+  <p>When facing a problem, programmers will often choose a solution from a variety of possible functions they could use. While a function could be chosen for many reasons, such as a for loop being easier to read or a higher order function taking up less characters, another aspect to consider is how hard running the function will be in terms of the number of calculations that will have to be made. Time Complexity refers to how the time it takes to complete a function scales in comparison to the size of the input it takes in. For a basic example of this, let's look at a couple of functions.</p>
+  <p>First, we have a function that will take in a number and add one to it. You could pass multiple arguments into it, but it will always add one to the first one. This is an example of a constant time complexity, meaning that the size of the input won't impact how long it takes to output. In Big O notation, a common way of writing out time complexities, this is represented as O(1).</p>
+  <code>
+    <pre>
+      function(num) {
+        return num + 1;
+      }
+    </pre>
+  </code>
+  <p>In comparison, let's take a look at a for-loop which console logs every argument passed in. In this case, it will run its console log once for each argument passed in, extending the time of the function at a fixed rate per argument.  This is a linear time complexity, where the time taken is directly proportional to the number of arguments.</p>
+  <code>
+    <pre>
+      function(nums) {
+        for (var i = 0; i < num.length; i++) {
+          console.log(num[i]);
+        }
+      }
+    </pre>
+  </code>
+  <p>On a graph, it would be represented in a straight line. A straight line going diagonally upward, as opposed to O(1)'s which is a flat straight line.</p>
+  <img src="{% static "images/time-complexity01.jpg" %}">
+  <p>While linear is an easy way to view things, many times, an additional argument can lead to the time increasing at more than a fixed rate. For instance, if the previous function were changed to run through a second loop for each item in the first loop, additional items passed in would lead to additional outputs in both the outer and inner loops scaling the amount of work each loop has to do.</p>
+  <code>
+    <pre>
+      function(nums){
+        for (var i = 0; i < nums.length; i++) {
+          for (var j = 0; j < nums.length; j++) {
+            console.log(nums[j]);
+          }
+        }
+      }
+    </pre>
+  </code>
+  <p>This is an example of a quadratic time complexity noted as O(N²), which creates a graph that curves upwards.</p>
+  <p>This sort of scaling increases further with exponential time complexities, O(2<sup>N</sup>), which are similar yet more extreme. Instead of simply looping through it again, what if we used a recursive function that instead created a copy of the array without the current value in the for loop and called the function again with that new array. This would cause not only the lengths of loops to increase, but also increase the number of times the function would be run, increasing the time an additional element adds to the function.</p>
+  <code>
+    <pre>
+      var recurse = function(nums) {
+        for (var i = 0; i < nums.length; i++) {
+          console.log(num[i]) {
+            var lessNums = nums.slice();
+            lessNums.splice(i, 1);
+            recurse(lessNums);
+          }
+        }
+      }
+    </pre>
+  </code>
+  <p>Its graph curves upward, similarly to quadratic but grows more rapidly.</p>
+  <img src="{% static "images/time-complexity02.jpg" %}">
+  <p>So far, all of these examples have shown more complicated functions becoming more and more complex, but there are functions that scale the other way, with each additional argument adding less and less complexity to the function. This is referred to as a logarithmic time complexity, represented by O(log(N)). An example of this is a for loop where i doubles, skipping over more and more elements of the array as time goes on. By doubling the range it skips over, this would also require the input to be increasingly larger to have the same impact it could have before.</p>
+  <code>
+    <pre>
+      functions(nums) {
+        for (var i = 0; i < nums.length; i = i * 2) {
+          console.log(i);
+        }
+      }
+    </pre>
+  </code>
+  <img src="{% static "images/time-complexity03.jpg" %}">
+  <p>While it's unlikely to affect smaller programs, thinking about the time complexity of a program is important as solving a problem such as N-Queens for a higher number can take a long time to run if you aren't careful. Additionally, a program will probably contain different time complexities for different functions, which can be useful in figuring out which parts of your program work better. While a recursive strategy can often be cooler than for-loops, the latter may run better having less of a strain on the system.</p>
+  <p>Overall, these are some basic examples of time complexity and its types. While staying toward the linear/logarithmic side seems better, sometimes having more complex functions will be necessary. Even still, it's good to keep in mind the effect your program has on the system running it as it will be important when dealing with larger inputs.</p>
+</body>

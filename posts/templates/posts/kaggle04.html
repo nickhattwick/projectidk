@@ -1,0 +1,294 @@
+<head>
+  <style type="text/css">
+    code { background-color: gray; color: blue; }
+  </style>
+</head>
+<body>
+  <p>The <a href="https://www.kaggle.com/c/facial-keypoints-detection">Facial Keypoints Detection</a> is an image recognition problem with the goal of finding features such as eyes, noses, and mouths on a variety of images. This will be my second attempt at an image recognition problem and this time will be based on finding details in an image as opposed to classifying it into one of ten categories. Initially, I'm not totally sure if this would be more classification, since it could be classifying pixels into facial details such as "eyebrow upper right corner", or if it would be more regression since it's taking a classification and trying to find the perfect match in the data. I'm leaning toward the second since coordinates will be the number we're returning. From testing on the cloud for recognizing digits, I found Amazon's Sumerian to be quite expensive, but found a limited solution in Google's Colab, a free platform with GPU that was surprisingly easy to use. It was able to run the previous task's quite quickly compared to Sumerian's smallest GPU instance which would still have cost 20 dollars or my laptop on its CPU, which was what I needed at the time. It's not intended for large or long running processes, and I'd likely hit its limit soon enough, though it's an awesome free learning tool. Given the costs of other cloud options and having access to a GPU already, I've set up my desktop to dual boot Ubuntu and installed the necessary drivers to allow Tensorflow access to it. The GPU is a Nvidia GeForce 1080 and I'm looking forward to seeing how it fares. Lastly, for my further study of Deep Learning, I've been reading Deep Learning with Python which is by Keras's creator, François Chollet, which has been pretty effective for explaining the concepts and basic math behind neural networks so far.
+
+  <h2>The Data</h2>
+  <p>The data is divided into a training and test file with each image as its own row. The training data set has different facial feature positions as columns, separated into a column for the x and y coordinates. For instance, columns regarding the left eye coordinates are "left_eye_center_x", "left_eye_center_y", "left_eye_inner_corner_x, "left_eye_inner_corner_y", "left_eye_outer_corner_x", and "left_eye_outer_corner_y". The six facial features recognized in this data set are eyes, eyebrows, nose and mouth, with 30 coordinates combined. The data format itself is separated quite a bit from the original 96 x 96 pixel image data which is represented as a single string containing pixel darkness for each pixel left to right, row by row, separated by spaces. Instead of adding the same coordinates columns directly to the test data set, there's a "id lookup table" which connects images to a row in the output which contains a single data point, which adds a step to the submission.</p>
+  <strong>Data Preprocessing</strong>
+  <p>While the submission process seems slightly tedious, a lot of the work for this one is already done with the image pixels and feature coordinates already listed into a data set. Images are typically represented as 4D tensors with the dimensions representing samples, height, width, and channels. With a grey-scale image, there's only one color channel where as a RGB image would have 3. Currently the training data is represented as a 2D tensor with traditional rows and columns. Since all of the coordinates are already in float format, there won't be any sort of categorical encoding needed here. The process will consist of imputing missing values, splitting the image column's values into a 2D tensor itself, containing pixel columns and rows, scaling the data and finally converting it to a 4D tensor.</p>
+  <p>First off, I'll import the three files as Pandas' DataFrames.</p>
+  <code>
+    <pre>
+      training = pd.read_csv('training.csv')
+      lookup = pd.read_csv('IdLookupTable.csv')
+      test = pd.read_csv('test.csv')
+    </pre>
+  </code>
+  <p>While these steps are similar to what I've done previously, a big difference here makes me wonder if the imputing process will need to be different here. In the previous data sets, most of the data is filled in with a few missing values here and there. In this case, a large majority of the rows in the training data set only contain data for eye center coordinates, which means that the normal process would be taking data in the first 2284 rows and using them to fill in the majority of the data from the rest of the 7049 rows. In this case, I'll be setting the missing data to the value 0 and trusting the neural network to learn to treat it as missing. The book I'm reading told me that this is safe to do with neural networks, which I'm already trusting to do things I don't fully understand.</p>
+
+  <p>Pandas DataFrames have a method called "fillna" which takes a value and replaces all missing values in the DataFrame with it.</p>
+
+  <code>
+    <p>training = training.fillna(0)</p>
+  </code>
+
+  <p>Next up, in order to get these values into a Numpy array which will be easier to work with, convert the image string into a list of pixels.</p>
+
+  <code>
+    <pre>
+      def toarray(x):
+          x = x.split(" ")
+          return x
+      training['Image'] = training['Image'].apply(toarray)
+    </pre>
+  </code>
+
+  <p>After this, separate the labels that will be used from the features.</p>
+
+  <code>
+    <pre>
+      label_cols = [col for col in training.columns if col != 'Image']
+      labels = training[label_cols]
+      training = training.drop(label_cols, axis=1)
+    </pre>
+  </code>
+
+  <p>Now training only contains the features, while the labels are stored in a Numpy array. In order to reshape, the best option I could find was to take the arrays stored in each rows image column and separate them into an individual column for each pixel. I realize here I've still got a good amount of learning to do with Numpy and Pandas I'm sure there's a better way to do this. The best option I found was to create a column by looping through each pixel and then through each image array and add the column, since Pandas takes in complete columns to construct them and building an empty one and editing it didn't seem any faster. Anyways, here's a process that needed to run over night to get through 7049 rows with 9216 pixels each and construct the dataframe.</p>
+
+  <code>
+    <pre>
+      for i in range(len(training['Image'][0])):
+          print(i)
+          col_name = "pixel" + str(i)
+          vals = []
+      for index, row in training.iterrows():
+          vals.append(row['Image'][i])
+          training[col_name] = vals
+          training = training.drop('Image', axis=1)
+    </pre>
+  </code>
+
+  <p>Afterwards, I saved this to a csv to not have to run this again, before converting to a Numpy array and reshaping it into a 4D tensor.</p>
+
+  <code>
+    <pre>
+      scaler = StandardScaler()
+      training = scaler.fit_transform(training)
+      features = np.reshape(training, (-1, 96, 96, 1))
+    </pre>
+  </code>
+  <p>Since there are multiple labels the network will try to predict, these will need to be restructured.</p>
+
+  <code>
+    <pre>
+      label_dict = {}
+      for col in label_cols:
+      label_dict[col] = tf.convert_to_tensor(labels[col].values)
+    </pre>
+  </code>
+  <p>Lastly, we can convert the features and labels into one of Tensorflow's Dataset objects for easier processing.</p>
+
+  <code>
+    <pre>
+      feature_tensor = tf.convert_to_tensor(features)
+      dataset = tf.data.Dataset.from_tensor_slices((feature_tensor, label_tensor))
+    </pre>
+  </code>
+
+  <strong>Creating The Models</strong>
+  <p>Now that the data is in a workable format, it's time to create and test the model. This will be similar to the one used for recognizing digits, but the sequential model can't be used for processes with multiple inputs and outputs. For this, Keras's functional API will be used, though the basic structure of a CNN remains mostly the same. The input data gets passed through sets of convolution layers which apply filters over the data to highlight patterns that would be hard to see otherwise. Convolution layers look for these patterns by looking at segments of the data at a time using a filter, as opposed to the standard dense layer which can only find global patterns. The output of a convolution layer is large and needs to be passed through a pooling layer, which summarizes the data. MaxPooling summarizes sections of data based on the highest value its currently looking at and tends to be the most effective pooling strategy. After being run through sequences of convolution and pooling layers, the data will be in a more suitable form for making a prediction and needs to be flattened to 1D and run through different dense layer to predict each output.</p>
+
+  <p>Speaking of the output, last time I used a 10 unit softmax layer which predicted the probability that that the given data was each of the 10 classes. This time, instead of classes, I'm running a regression problem to find 30 different coordinates.</p>
+
+  <code>
+    <pre>
+      keras = tf.keras
+      Model = keras.models.Model
+      layers = keras.layers
+      Input = keras.Input
+
+      input_tensor = Input(shape=(96, 96, 1), dtype='float', name='pics')
+      x = layers.Conv2D(32, (3,3), padding='same', activation='relu')(input_tensor)
+      x = layers.MaxPooling2D((2,2), strides=2)(x)
+      x = layers.Conv2D(32, (3,3), padding='same', activation='relu')(x)
+      x = layers.MaxPooling2D((2,2), strides=2)(x)
+      x = layers.Flatten()(x)
+      x = layers.Dense(1, activation='relu')(x)
+      outputs = []
+      for label in label_cols:
+          outputs.append(layers.Dense(1, name=label)(x))
+          model = Model(input_tensor, outputs)
+    </pre>
+  </code>
+
+  <p>Keras's functional API treats each layer as a function that edits the output of the previous layer and gives more control over the Neural Network. The compilation and fitting of the model are also the same as with the sequential model, so while it's a different way of building the model, most of the process is similar. Before fitting, I split the training data into a training set (80%) and a validation set (20%) to test with the model, batching and repeating them to fit the iterations of the model.</p>
+
+  <code>
+    <pre>
+      dataset = dataset.shuffle(7049)
+      val_ds = dataset.take(1410)
+      train_ds = dataset.skip(1410)
+      train_ds = train_ds.repeat().batch(32)
+
+      model.compile(optimizer='rmsprop', loss='mse', metrics=['mae'])
+      model.fit(train_ds, epochs=30, validation_data=val_ds.repeat().batch(32), validation_steps=math.ceil(1410/32), steps_per_epoch=math.ceil((7049-1410)/32))
+    </pre>
+  </code>
+
+  <strong>Submission Process</strong>
+  <p>Kaggle's Test Data only included the images, which also need to be converted into separate columns and reshaped and scaled it for processing. I also saved this to a csv to allow easier loading.</p>
+
+  <code>
+    <pre>
+      test['Image'] = test['Image'].apply(toarray)
+      for i in range(len(test['Image'][0])):
+          col_name = "pixel" + str(i)
+          vals = []
+          for index, row in test.iterrows():
+              vals.append(row['Image'][i])
+              test[col_name] = vals
+
+      test = test.drop('Image', axis=1)
+      temp_test = test.drop('ImageId', axis=1)
+      temp_test = scaler.transform(temp_test.values)
+      temp_test = np.reshape(temp_test, (-1, 96, 96, 1))
+      preds = model.predict(temp_test)
+    </pre>
+  </code>
+
+  <p>Then, I added the results back to the test dataset as columns similar to the initial form of the training data.</p>
+
+  <code>
+    <pre>
+      count = 0;
+      for name in label_cols:
+          test[name] = preds[count]
+          count += 1
+    </pre>
+  </code>
+
+  <p>Lastly, I used the lookup table to create the final submission table by filling in the location column by referencing the row and image Ids and removed values outside of the 0 to 96 range, since that would cause an error on the submission.</p>
+
+  <code>
+    <pre>
+      def format_for_kaggle(data, lookup):
+      output = lookup.copy(deep=True)
+      locations = []
+      for index, row in output.iterrows():
+      locations.append(data[row['FeatureName']][row['ImageId']-1])
+      output['Location'] = locations
+      return output
+      output = format_for_kaggle(test, lookup)
+      output.loc[output['Location'] > 96, 'Location'] = 96.000000
+      output.loc[output['Location'] < 0, 'Location'] = 0
+      output.to_csv('attempt.csv', index=False)
+    </pre>
+  </code>
+  <p>The score for this attempt was 19.70280, which doesn't seem too bad, since it reflects the error rate, although the top scores get less than two percent wrong. Still, it at least doesn't feel like I'm way off track.</p>
+  <strong>Testing Different Configurations</strong>
+  <p>For this round I wanted to try different configurations on the number of Conv2D/Maxpool layer combinations (C&Ms) , number of epochs trained on, and which optimizer was used (adam, rmsprop, or sgd).</p>
+  <p>I tested these on the validation data from the training set as well as on Kaggle's test data and got the following results. The validation data will be the mean of all 30 mean absolute error values rounded to 2 digits.</p>
+  <strong>Validation Scores</strong>
+  <table style="border:1px solid;">
+    <tbody>
+      <tr style="border:1px solid;">
+        <td>Epochs</td>
+        <td>RMSProp</td>
+        <td>Adam</td>
+        <td>SGD</td>
+      </tr>
+      <tr>
+        <td>20</td>
+        <td>24.6</td>
+        <td>23.49</td>
+        <td>15.89</td>
+      </tr>
+      <tr>
+        <td>35</td>
+        <td>15.39</td>
+        <td>15.58</td>
+        <td>15.28</td>
+      </tr>
+      <tr>
+        <td>50</td>
+        <td>15.46</td>
+        <td>15.57</td>
+        <td>15.58</td>
+      </tr>
+    </tbody>
+  </table>
+  <strong>Kaggle Scores</strong>
+  <table style="border:1px solid;">
+    <tbody>
+      <tr style="border:1px solid;">
+        <td>Epochs</td>
+        <td>RMSProp</td>
+        <td>Adam</td>
+        <td>SGD</td>
+      </tr>
+      <tr>
+        <td>20</td>
+        <td>42.66</td>
+        <td>38.72</td>
+        <td>23.58</td>
+      </tr>
+      <tr>
+        <td>35</td>
+        <td>23.71</td>
+        <td>23.73</td>
+        <td>24.21</td>
+      </tr>
+      <tr>
+        <td>50</td>
+        <td>23.95</td>
+        <td>23.82</td>
+        <td>23.97</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>One trend I notice from the optimizers is that the SGD function seems to do better with less epochs, while the RMSProp and Adam catch up and seem to perform better later. The performance was understandably better on the validation set since it was used to tune the model. Disappointingly, the random example of RMSProp and 30 epochs I used earlier performed better than all of these. I wanted to spread out the epochs a bit more and upped the middle number to 35 to be more between 20 and 50. Since all but SGD performed worse at 50 epochs, the ideal number of epochs may be around 35. Given this, I decided to try running the same models with 25 and 30 epochs each.</p>
+  <table style="border:1px solid;">
+    <tbody>
+      <tr style="border:1px solid;">
+        <td>Epochs</td>
+        <td>RMSProp</td>
+        <td>Adam</td>
+        <td>SGD</td>
+      </tr>
+      <tr>
+        <td>25</td>
+        <td>15.44</td>
+        <td>15.67</td>
+        <td>15.63</td>
+      </tr>
+      <tr>
+        <td>30</td>
+        <td>15.49</td>
+        <td>15.46</td>
+        <td>15.76</td>
+      </tr>
+    </tbody>
+  </table>
+  <table style="border:1px solid;">
+    <tbody>
+      <tr>
+        <td>Epochs</td>
+        <td>RMSProp</td>
+        <td>Adam</td>
+        <td>SGD</td>
+      </tr>
+      <tr>
+        <td>25</td>
+        <td>23.83</td>
+        <td>23.79</td>
+        <td>23.55</td>
+      </tr>
+      <tr>
+        <td>30</td>
+        <td>23.70</td>
+        <td>23.73</td>
+        <td>23.46</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Unforunately, this didn't make much of a change, leaving me a bit confused. Maybe I got lucky on the process I ran earlier. It seems like on average I'm getting a 23-24 percent loss will minimum improvement (if that) past the 25th epoch. Still, this is way better than a random guess would be, so at least I've managed to do something, even though I'm sure there's lots of room for improvement.</p>
+
+  <strong>Takeaways</strong>
+  <p>Overall, I'm feeling a bit more comfortable with Neural Networks and getting a feel for processing data in general. Admittedly, I tried to use a sequential model at first and soon realized I couldn't get the desired output, thought the switch with Keras's functional api made the fix pretty straight forward. Setting up Ubuntu to work with my GPU also helped me to get much better speed than my previous computer and AWS's smallest GPU offering without worrying about the cost either. It makes the computer mostly unusable while running, but can get through several models in a few hours.</p>
+
+  <p>Looking at the scores and the data, there are a lot of other changes I could try such as the number of layers in the model itself and looking into a better way to avoid going out of range on the data for Kaggle. I can definitely see digging in further with a domain more relevant to my interests or for work, but for a sample project I want to wrap up here.</p>
+</body>
